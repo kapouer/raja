@@ -1,0 +1,37 @@
+{
+  "name": "raja",
+  "version": "0.0.0",
+  "description": "express-dom cache plugin managing resources and live synchronisation",
+  "main": "lib/core.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kapouer/raja"
+  },
+  "keywords": [
+    "express",
+    "DOM",
+    "cache",
+    "resource",
+    "live",
+    "synchro"
+  ],
+  "author": "Jérémy Lal <kapouer@melix.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kapouer/raja/issues"
+  },
+  "dependencies": {
+    "cache-on-demand": "^0.2.0",
+    "express-buffer-response": "^1.0.0",
+    "orm": "^2.1.20",
+    "queue-async": "^1.0.7",
+    "request": "^2.49.0"
+  },
+  "devDependencies": {
+    "express": "^4.10.2",
+    "express-dom": "0.0.x"
+  }
+}
