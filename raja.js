@@ -20,14 +20,6 @@ function Raja() {
 	this.delays = [];
 	var loc = document.location;
 	this.base = loc.protocol + '//' + loc.host + '/';
-	var links = document.head.querySelectorAll('link[rel="resource"]');
-	for (var i=0; i < links.length; i++) {
-		var link = links.item(i);
-		this.resources[link.href] = {
-			mtime: link.getAttribute('last-modified'),
-			url: link.href
-		};
-	}
 }
 
 Raja.prototype.updateLink = function(resource, mtime) {
@@ -53,6 +45,14 @@ Raja.prototype.delay = function(url, listener) {
 };
 
 Raja.prototype.catchup = function() {
+	var links = document.head.querySelectorAll('link[rel="resource"]');
+	for (var i=0; i < links.length; i++) {
+		var link = links.item(i);
+		this.resources[link.href] = {
+			mtime: link.getAttribute('last-modified'),
+			url: link.href
+		};
+	}
 	var list = this.delays;
 	delete this.delays;
 	for (var i=0; i < list.length; i++) {
