@@ -27,8 +27,9 @@ Raja.prototype.updateLink = function(resource, mtime) {
 		link = document.createElement('link');
 		link.rel = "resource";
 		link.href = resource.url;
-		document.head.appendChild(link);
-		document.head.appendChild(document.createTextNode("\n"));
+		var tn = document.createTextNode("\n");
+		document.head.insertBefore(tn, document.head.firstChild);
+		document.head.insertBefore(link, tn);
 	}
 	if (mtime != null) {
 		resource.mtime = mtime;
