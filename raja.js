@@ -127,13 +127,11 @@ Raja.prototype.absolute = function(url) {
 		url = path.join('/') + url.substring(2);
 	} else if (url.indexOf('.') == 0) {
 		url = path + url.substring(1);
-	} else {
-		// regular interpretation of url
-		if (!this._a) this._a = document.createElement('a');
-		this._a.href = url;
-		url = this._a.href;
 	}
-	return url;
+	// regular interpretation of url
+	if (!this._a) this._a = document.createElement('a');
+	this._a.href = url;
+	return this._a.href;
 };
 
 function xhr(url, cb) {
