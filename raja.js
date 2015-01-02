@@ -18,8 +18,7 @@ script('/socket.io/socket.io.js', function(err) {
 function Raja() {
 	this.resources = {};
 	this.delays = [];
-	var loc = document.location;
-	this.base = loc.protocol + '//' + loc.host + '/';
+	this.base = document.getElementById('raja-io').content;
 }
 
 Raja.prototype.updateLink = function(resource, mtime) {
