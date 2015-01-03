@@ -12,11 +12,10 @@ script('/socket.io/socket.io.js', function(err) {
 	raja._emit = proto.emit;
 	raja.off = proto.off;
 	raja.listeners = proto.listeners;
-	raja.catchup();
+	raja.ready();
 });
 
 function Raja() {
-	this.resources = {};
 	this.delays = [];
 	this.base = document.getElementById('raja-io').content;
 }
@@ -44,7 +43,8 @@ Raja.prototype.delay = function(url, listener) {
 	return this;
 };
 
-Raja.prototype.catchup = function() {
+Raja.prototype.ready = function() {
+	this.resources = {};
 	var links = document.head.querySelectorAll('link[rel="resource"]');
 	for (var i=0; i < links.length; i++) {
 		var link = links.item(i);
@@ -70,9 +70,10 @@ Raja.prototype.emit = function(what) {
 };
 
 Raja.prototype.on = function(url, listener) {
-	if (!window.io) {
+	if (!this.resources) {
 		return this.delay(url, listener);
 	}
+	if (!this.io) this.setio();
 	var self = this;
 	if (url == "error") return this._on(url, listener);
 	var plistener = function() {
@@ -103,24 +104,26 @@ Raja.prototype.on = function(url, listener) {
 		});
 	})(function(err) {
 		if (err) self.emit('error', err);
-		if (!self.io) {
-			self.io = io(self.base);
-			self.io.on('reconnect_failed', function(err) {
-				if (err) self.emit('error', err);
-			});
-		}
-		if (!resource.io) {
-			resource.io = true;
+		if (!resource.room) {
+			resource.room = murl;
 			self.io.emit('join', {room: murl, mtime: resource.mtime});
-			self.io.on('message', function(msg) {
-				var data = msg.data;
-				if (data) delete msg.data;
-				self.emit(murl, data, msg);
-			});
 		}
 	});
 	return this;
-}
+};
+
+Raja.prototype.setio = function() {
+	this.io = io(this.base);
+	var self = this;
+	this.io.on('reconnect_failed', function(err) {
+		if (err) self.emit('error', err);
+	});
+	this.io.on('message', function(msg) {
+		var data = msg.data;
+		if (data) delete msg.data;
+		self.emit(msg.url, data, msg);
+	});
+};
 
 Raja.prototype.absolute = function(url) {
 	if (/^https?/i.test(url)) return url;
