@@ -103,15 +103,19 @@ Raja.prototype.on = function(url, listener) {
 		});
 	})(function(err) {
 		if (err) self.emit('error', err);
+		if (!self.io) {
+			self.io = io(self.base);
+			self.io.on('reconnect_failed', function(err) {
+				if (err) self.emit('error', err);
+			});
+		}
 		if (!resource.io) {
-			resource.io = io(self.base + '?room=' + encodeURIComponent(murl) + '&mtime=' + resource.mtime);
-			resource.io.on('message', function(msg) {
+			resource.io = true;
+			self.io.emit('join', {room: murl, mtime: resource.mtime});
+			self.io.on('message', function(msg) {
 				var data = msg.data;
 				if (data) delete msg.data;
 				self.emit(murl, data, msg);
-			});
-			resource.io.on('reconnect_failed', function(err) {
-				if (err) self.emit('error', err);
 			});
 		}
 	});
