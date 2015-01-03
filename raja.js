@@ -90,7 +90,9 @@ Raja.prototype.on = function(url, listener) {
 	var resource = resources[murl];
 	(function(next) {
 		if (resource) {
-			listener(resource.data, {method:"get", url: url, mtime: resource.mtime});
+			if (resource.data !== undefined) {
+				listener(resource.data, {method:"get", url: url, mtime: resource.mtime});
+			}
 			return next();
 		}
 		resource = resources[murl] = {url: murl};
