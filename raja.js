@@ -189,6 +189,7 @@ function tryJSON(txt) {
 	try {
 		obj = JSON.parse(txt);
 	} catch(e) {
+		console.error(e.toString());
 		return txt;
 	}
 	return obj;
