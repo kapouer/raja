@@ -62,7 +62,11 @@ Raja.prototype.ready = function() {
 
 Raja.prototype.emit = function(what) {
 	var args = Array.prototype.slice.call(arguments, 0);
-	this._emit.apply(this, args);
+	try {
+		this._emit.apply(this, args);
+	} catch(e) {
+		console.error(e);
+	}
 	if (what == "error" && this.listeners("error").length == 0) {
 		args.shift();
 		console.error.apply(console, args);
