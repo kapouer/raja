@@ -32,7 +32,7 @@ Raja.prototype.updateLink = function(resource, mtime) {
 	}
 	if (mtime != null) {
 		if (!resource.mtime || mtime > resource.mtime) resource.mtime = mtime;
-		link.setAttribute("last-modified", resource.mtime.getTime());
+		link.setAttribute("last-modified", resource.mtime);
 	} else {
 		console.warn("empty mtime", resource, mtime);
 	}
@@ -49,7 +49,7 @@ Raja.prototype.ready = function() {
 	for (var i=0; i < links.length; i++) {
 		var link = links.item(i);
 		this.resources[link.href] = {
-			mtime: new Date(parseInt(link.getAttribute('last-modified'))),
+			mtime: parseInt(link.getAttribute('last-modified')),
 			url: link.href
 		};
 	}
@@ -108,7 +108,7 @@ Raja.prototype.on = function(url, listener) {
 		if (err) self.emit('error', err);
 		if (!resource.room) {
 			resource.room = murl;
-			self.io.emit('join', {room: murl, mtime: resource.mtime.getTime()});
+			self.io.emit('join', {room: murl, mtime: resource.mtime});
 		}
 	});
 	return this;
@@ -201,8 +201,9 @@ function tryJSON(txt) {
 function tryDate(txt) {
 	if (!txt) return;
 	var date = new Date(txt);
-	if (isNaN(date.getTime())) return;
-	else return date;
+	var time = date.getTime();
+	if (isNaN(time)) return;
+	else return time;
 }
 
 function $(str) {
