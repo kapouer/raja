@@ -96,22 +96,33 @@ Raja.prototype.on = function(url, listener) {
 		if (resource) {
 			if (resource.data !== undefined) {
 				listener(resource.data, {method:"get", url: url, mtime: resource.mtime});
+			} else if (!resource.error) {
+				// loading resource
+				if (!resource.queue) resource.queue = [];
+				resource.queue.push(listener);
+			} else {
+				next(resource.error);
 			}
-			return next();
+			return;
 		}
-		resource = resources[murl] = {url: murl};
+		resource = resources[murl] = {url: murl, queue: [listener]};
 		xhr(url, function(err, txt, mtime) {
 			var obj = tryJSON(txt);
-			if (err) return next(err);
+			if (err) {
+				resource.error = err;
+				return next(err);
+			}
 			resource.data = obj;
-			listener(obj, {method:"get", url: url, mtime: mtime});
+			for (var i=0; i < resource.queue.length; i++) {
+				resource.queue[i](obj, {method:"get", url: url, mtime: mtime});
+			}
 			self.updateLink(resource, mtime);
 			next();
 		});
 	})(function(err) {
 		if (err) self.emit('error', err);
-		if (!resource.room) {
-			resource.room = murl;
+		if (!resource.live) {
+			resource.live = true;
 			self.io.emit('join', {room: murl, mtime: resource.mtime});
 		}
 	});
