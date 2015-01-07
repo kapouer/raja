@@ -31,8 +31,8 @@ Raja.prototype.updateLink = function(resource, mtime) {
 		document.head.insertBefore(link, tn);
 	}
 	if (mtime != null) {
-		resource.mtime = mtime;
-		link.setAttribute("last-modified", mtime.getTime());
+		if (!resource.mtime || mtime > resource.mtime) resource.mtime = mtime;
+		link.setAttribute("last-modified", resource.mtime.getTime());
 	} else {
 		console.warn("empty mtime", resource, mtime);
 	}
@@ -49,7 +49,7 @@ Raja.prototype.ready = function() {
 	for (var i=0; i < links.length; i++) {
 		var link = links.item(i);
 		this.resources[link.href] = {
-			mtime: link.getAttribute('last-modified'),
+			mtime: new Date(parseInt(link.getAttribute('last-modified'))),
 			url: link.href
 		};
 	}
@@ -108,7 +108,7 @@ Raja.prototype.on = function(url, listener) {
 		if (err) self.emit('error', err);
 		if (!resource.room) {
 			resource.room = murl;
-			self.io.emit('join', {room: murl, mtime: resource.mtime});
+			self.io.emit('join', {room: murl, mtime: resource.mtime.getTime()});
 		}
 	});
 	return this;
@@ -121,8 +121,11 @@ Raja.prototype.setio = function() {
 		if (err) self.emit('error', err);
 	});
 	this.io.on('message', function(msg) {
+		if (!msg.url) return;
 		var data = msg.data;
 		if (data) delete msg.data;
+		var resource = self.resources[msg.url];
+		if (resource && msg.mtime) self.updateLink(resource, msg.mtime);
 		self.emit(msg.url, data, msg);
 	});
 };
