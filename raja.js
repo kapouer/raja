@@ -94,20 +94,25 @@ Raja.prototype.on = function(url, listener) {
 	this._on(murl, plistener);
 	var resources = this.resources;
 	var resource = resources[murl];
+	if (!resource) resource = resources[murl] = {url: murl};
+	if (resource.error) return;
+
 	(function(next) {
-		if (resource) {
-			if (resource.data !== undefined) {
-				listener(resource.data, {method:"get", url: url, mtime: resource.mtime});
-			} else if (!resource.error) {
-				// loading resource
-				if (!resource.queue) resource.queue = [];
-				resource.queue.push(listener);
-			} else {
-				next(resource.error);
-			}
+		if (resource.data !== undefined) {
+			// resource has been loaded once
+			// this is wrong when murl != url
+			listener(resource.data, {method:"get", url: url, mtime: resource.mtime});
+			return next();
+		} else if (resource.mtime !== undefined) {
+			// resource merged, just join it
+			return next();
+		} else if (resource.queue) {
+			// resource is currently loading
+			resource.queue.push(listener);
 			return;
 		}
-		resource = resources[murl] = {url: murl, queue: [listener]};
+		// resource has not been loaded, is not loading. Proceed
+		resource.queue = [listener];
 		xhr(url, function(err, txt, mtime) {
 			var obj = tryJSON(txt);
 			if (err) {
@@ -115,9 +120,15 @@ Raja.prototype.on = function(url, listener) {
 				return next(err);
 			}
 			resource.data = obj;
-			for (var i=0; i < resource.queue.length; i++) {
-				resource.queue[i](obj, {method:"get", url: url, mtime: mtime});
+			var queue = resource.queue;
+			for (var i=0; i < queue.length; i++) {
+				try {
+					queue[i](obj, {method:"get", url: url, mtime: mtime});
+				} catch(e) {
+					console.error(e);
+				}
 			}
+			delete resource.queue;
 			self.updateLink(resource, mtime);
 			next();
 		});
@@ -137,13 +148,28 @@ Raja.prototype.setio = function() {
 	this.io.on('reconnect_failed', function(err) {
 		if (err) self.emit('error', err);
 	});
+	var pageUrl = this.absolute('.');
+	var pageResource = this.resources[pageUrl];
+	if (!pageResource) pageResource = this.resources[pageUrl] = {url: pageUrl};
+	this.io.emit('join', {
+		room: pageUrl,
+		mtime: pageResource.mtime
+	});
+
 	this.io.on('message', function(msg) {
 		if (!msg.url) return;
 		var data = msg.data;
 		if (data) delete msg.data;
 		var resource = self.resources[msg.url];
-		if (resource && msg.mtime) self.updateLink(resource, msg.mtime);
-		self.emit(msg.url, data, msg);
+		var mtime = msg.mtime;
+		if (!mtime) return;
+		if (msg.url != pageUrl) {
+			self.updateLink(pageResource, mtime);
+			self.emit(msg.url, data, msg);
+		} else if (pageResource.mtime && mtime > pageResource.mtime) {
+			console.log("A dependency was modified, please reload", pageUrl);
+		}
+		if (resource) self.updateLink(resource, mtime);
 	});
 };
 
