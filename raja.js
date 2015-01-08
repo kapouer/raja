@@ -113,7 +113,7 @@ Raja.prototype.on = function(url, listener) {
 		}
 		// resource has not been loaded, is not loading. Proceed
 		resource.queue = [listener];
-		xhr(url, function(err, txt, mtime) {
+		Raja.xhr(url, function(err, txt, mtime) {
 			var obj = tryJSON(txt);
 			if (err) {
 				resource.error = err;
@@ -189,7 +189,7 @@ Raja.prototype.absolute = function(url) {
 	return this._a.href;
 };
 
-function xhr(url, cb) {
+Raja.xhr = function(url, cb) {
 	var req = new XMLHttpRequest();
 	req.open('GET', url, true);
 	req.onreadystatechange = function (e) {
@@ -202,7 +202,8 @@ function xhr(url, cb) {
 		}
 	};
 	req.send(null);
-}
+	return req;
+};
 
 function script(url, cb) {
 	var script = document.createElement("script");
