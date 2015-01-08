@@ -31,7 +31,9 @@ Raja.prototype.updateLink = function(resource, mtime) {
 		document.head.insertBefore(link, tn);
 	}
 	if (mtime != null) {
-		if (!resource.mtime || mtime > resource.mtime) resource.mtime = mtime;
+		if (!resource.mtime || mtime > resource.mtime) {
+			resource.mtime = mtime;
+		}
 		link.setAttribute("last-modified", resource.mtime);
 	} else {
 		console.warn("empty mtime", resource, mtime);
