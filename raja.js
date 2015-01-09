@@ -27,7 +27,14 @@ Raja.prototype.delay = function(url, listener) {
 
 Raja.prototype.ready = function() {
 	this.url = this.absolute('.');
-	this.mtime = new Date(document.lastModified).getTime();
+	// work around webkit bug https://bugs.webkit.org/show_bug.cgi?id=4363
+	var lastMod = Date.parse(document.lastModified);
+	var now = new Date();
+	var diff = (new Date(now.toLocaleString())).getTimezoneOffset() - now.getTimezoneOffset();
+	if (!diff) diff = now.getTimezoneOffset() * 60000;
+	else diff = 0;
+	this.mtime = lastMod - diff;
+
 	if (isNaN(this.mtime)) this.mtime = Date.now();
 	this.resources = {};
 	var links = document.head.querySelectorAll('link[rel="resource"]');
