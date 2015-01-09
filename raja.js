@@ -20,46 +20,37 @@ function Raja() {
 	this.base = document.getElementById('raja-io').content;
 }
 
-Raja.prototype.updateLink = function(resource, mtime) {
-	var link = $('head > link[rel="resource"][href="'+resource.url+'"]');
-	if (!link) {
-		link = document.createElement('link');
-		link.rel = "resource";
-		link.href = resource.url;
-		var tn = document.createTextNode("\n");
-		document.head.insertBefore(link, document.head.firstChild);
-		document.head.insertBefore(tn, link);
-	}
-	if (mtime != null) {
-		if (!resource.mtime || mtime > resource.mtime) {
-			resource.mtime = mtime;
-		}
-		link.setAttribute("last-modified", resource.mtime);
-	} else {
-		console.warn("empty mtime", resource, mtime);
-	}
-};
-
 Raja.prototype.delay = function(url, listener) {
 	this.delays.push([url, listener]);
 	return this;
 };
 
 Raja.prototype.ready = function() {
+	this.url = this.absolute('.');
+	this.mtime = new Date(document.lastModified).getTime();
+	if (isNaN(this.mtime)) this.mtime = Date.now();
 	this.resources = {};
 	var links = document.head.querySelectorAll('link[rel="resource"]');
 	for (var i=0; i < links.length; i++) {
 		var link = links.item(i);
-		this.resources[link.href] = {
-			mtime: parseInt(link.getAttribute('last-modified')),
-			url: link.href
-		};
+		this.resources[link.href] = {url: link.href, mtime: this.mtime};
 	}
 	var list = this.delays;
 	delete this.delays;
 	for (var i=0; i < list.length; i++) {
 		this.on(list[i][0], list[i][1]);
 	}
+};
+
+Raja.prototype.link = function(url) {
+	var link = $('head > link[rel="resource"][href="'+url+'"]');
+	if (link) return;
+	link = document.createElement('link');
+	link.rel = "resource";
+	link.href = url;
+	var tn = document.createTextNode("\n");
+	document.head.insertBefore(link, document.head.firstChild);
+	document.head.insertBefore(tn, link);
 };
 
 Raja.prototype.emit = function(what) {
@@ -119,6 +110,8 @@ Raja.prototype.on = function(url, listener) {
 				resource.error = err;
 				return next(err);
 			}
+			self.link(resource.url);
+			resource.mtime = mtime;
 			resource.data = obj;
 			var queue = resource.queue;
 			for (var i=0; i < queue.length; i++) {
@@ -129,15 +122,10 @@ Raja.prototype.on = function(url, listener) {
 				}
 			}
 			delete resource.queue;
-			self.updateLink(resource, mtime);
 			next();
 		});
 	})(function(err) {
 		if (err) self.emit('error', err);
-		if (!resource.live) {
-			resource.live = true;
-			self.io.emit('join', {room: murl, mtime: resource.mtime});
-		}
 	});
 	return this;
 };
@@ -148,12 +136,9 @@ Raja.prototype.setio = function() {
 	this.io.on('reconnect_failed', function(err) {
 		if (err) self.emit('error', err);
 	});
-	var pageUrl = this.absolute('.');
-	var pageResource = this.resources[pageUrl];
-	if (!pageResource) pageResource = this.resources[pageUrl] = {url: pageUrl};
 	this.io.emit('join', {
-		room: pageUrl,
-		mtime: pageResource.mtime
+		room: this.url,
+		mtime: this.mtime
 	});
 
 	this.io.on('message', function(msg) {
@@ -161,15 +146,16 @@ Raja.prototype.setio = function() {
 		var data = msg.data;
 		if (data) delete msg.data;
 		var resource = self.resources[msg.url];
-		var mtime = msg.mtime;
-		if (!mtime) return;
-		if (msg.url != pageUrl) {
-			self.updateLink(pageResource, mtime);
-			self.emit(msg.url, data, msg);
-		} else if (pageResource.mtime && mtime > pageResource.mtime) {
-			console.log("A dependency was modified, please reload", pageUrl);
+		if (resource) {
+			if (!resource.mtime || msg.mtime > resource.mtime) resource.mtime = msg.mtime;
 		}
-		if (resource) self.updateLink(resource, mtime);
+		if (msg.mtime > self.mtime) {
+			self.mtime = msg.mtime;
+			if (msg.url != self.url && !resource) {
+				console.log("A resource of this page has changed", msg.url);
+			}
+		}
+		self.emit(msg.url, data, msg);
 	});
 };
 
