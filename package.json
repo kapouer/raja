@@ -32,7 +32,7 @@
     "queue-async": "^1.0.7",
     "request": "^2.49.0",
     "socket.io": "^1.2.1",
-    "socket.io-backlog": "^0.0.1",
+    "socket.io-backlog": "^0.0.2",
     "socket.io-client": "^1.2.1"
   },
   "peerDependencies": {
