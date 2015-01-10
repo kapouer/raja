@@ -159,7 +159,7 @@ Raja.prototype.setio = function() {
 		if (msg.mtime > self.mtime) {
 			self.mtime = msg.mtime;
 			if (msg.url != self.url && !resource) {
-				console.log("A resource of this page has changed", msg.url);
+				// a static file has changed
 			}
 		}
 		self.emit(msg.url, data, msg);
