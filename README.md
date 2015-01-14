@@ -32,7 +32,7 @@ app.set('statics', process.cwd() + '/public');
 
 // start raja store, socket.io server, socket.io client
 var raja = require('raja')({
-	store: "sqlite3://user:pass@localhost/raja",
+	store: "sqlite://raja.db",
 	io: {
 		uri: "http://localhost:7000", // the uri the client connects to
 		server: server								// spawns a socket.io server on it
