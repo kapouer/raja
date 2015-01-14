@@ -70,14 +70,16 @@ server.listen(7000);
 express-dom without raja
 ========================
 
-# Client-side development
+Client-side development
+-----------------------
 
 index.html uses some index.js to request /rest/collection and merge returned
 data into DOM.
 
-# express-dom
+express-dom
+-----------
 
-When a client requests http://localhost:7000/index, this module spawns a DOM
+When a client requests "http://localhost:7000/index", this module spawns a DOM
 into the server (using webkitgtk or else), and run index.html at the given url.
 
 Once this page is idle (no pending requests, no repaints, no activity) it
@@ -90,8 +92,8 @@ resource tracking, cache synchronization with raja
 When a raja proxy is setup on express-dom, it tracks all resources used by the
 first run of index.html, typically here it stores the fact that
 
-http://localhost:7000/index depends on
- http://localhost:7000/js/index.js
+http://localhost:7000/index depends on  
+ http://localhost:7000/js/index.js  
  http://localhost:7000/rest/collection
 
 it also stores the response html string, and it lets the spawned web page open
@@ -139,13 +141,45 @@ and javascript, a costly process, and be able to update build an up-to-date
 copy of the html very quickly, without having to reload the page.
 
 Typical figures:
-	- building a web page from scratch using express-dom and several http
-	  resources ~ 2 seconds
-	- getting a refreshed copy of a web page after modification of an http
-	  resource and reception of the raja synchronization message ~ 60 ms
-	- getting a copy from current cached instance ~ 6 ms
+* building a web page from scratch using express-dom and several http
+	resources ~ 2 seconds
+* getting a refreshed copy of a web page after modification of an http
+	resource and reception of the raja synchronization message ~ 60 ms
+* getting a copy from current cached instance ~ 6 ms
 
 
 live updates and the idempotency rule
 =====================================
+
+Since the web page is built once "out of nothing" on the server, serialized,
+then sent to the client, and can receive synchronization messages there,
+it is important to make sure the code merging data into the DOM can be
+idempotent.
+
+See http://github.com/kapouer/domt for such a library.
+
+
+synchronization messages format
+===============================
+
+```json
+{
+	src: <the initial resource that was modified>,
+	url: <the last invalidated resource>,
+	room: <the target resource being invalidated - typically the web page url>,
+	mtime: <last-modified of the resource>,
+	method: <the semantic http method representing what's happening to url>,
+	data: <an optional body representing the modification described by method>
+}
+```
+
+url is mandatory, room is optional and is equal to url if empty,
+src is optional and equal to url if empty.
+
+mtime is mandatory
+
+method is optional, defaults to "put", can be also "post" or "delete"
+
+data is optional, actually only provided by the express proxy upon a "post" or
+"put" resource modification.
 
