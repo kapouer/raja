@@ -116,8 +116,10 @@ obj is the element after modification.
 
 DELETE /element  
 {method: DELETE, url: /element}  
-This is the only non-homogeneous method, it can be fixed if it is seen
-as an element of a collection - it is discouraged to use it anyway.
+As can be seen on the message, it is not homogeneous (missing data).  
+It is actually a mistake to DELETE an element when it is not part of a
+collection. When this case happens, the corresponding collection message is
+emitted instead.
 
 
 Collections
@@ -137,4 +139,12 @@ each element in the list contains its unique identifier
 DELETE /collection  
 {method: DELETE, url: /collection, data: list}  
 each element in the list contains its unique identifier (and possibly only that)
+
+
+In conclusion, note that
+
+* DELETE /list/element  
+  is represented by a message to the parent list.
+* PUT /list/element  
+  is represented by two messages, one to the element and one to the parent list.
 
