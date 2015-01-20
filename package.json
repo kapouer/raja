@@ -1,6 +1,6 @@
 {
   "name": "raja",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "express-dom cache plugin managing resources and live synchronisation",
   "main": "lib/core.js",
   "scripts": {
