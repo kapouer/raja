@@ -162,24 +162,20 @@ See http://github.com/kapouer/domt for such a library.
 synchronization messages format
 ===============================
 
+See also doc/REST.md.
+
 ```json
 {
-	src: <the initial resource that was modified>,
-	url: <the last invalidated resource>,
-	room: <the target resource being invalidated - typically the web page url>,
+	url: <identifying the resource that was first modified>,
+	data: <optional data that describes the modification of that resource>,
 	mtime: <last-modified of the resource>,
-	method: <the semantic http method representing what's happening to url>,
-	data: <an optional body representing the modification described by method>
+	method: <the rest method applied to the resource>,
+	parents: [url1_using_url, url2_using_url1, ...]
 }
 ```
 
-url is mandatory, room is optional and is equal to url if empty,
-src is optional and equal to url if empty.
-
-mtime is mandatory
-
-method is optional, defaults to "put", can be also "post" or "delete"
-
-data is optional, actually only provided by the express proxy upon a "post" or
-"put" resource modification.
+Raja populates the parents list whenever a parent is found.
+It can be initially filled - it typically happens when acting upon an element
+of a collection, in which case the first url in the list is the url of the
+collection.
 
