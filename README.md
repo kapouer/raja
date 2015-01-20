@@ -1,5 +1,5 @@
-raja - synchronized cached proxies for express-dom
-==================================================
+raja - synchronized cache proxies for express-dom
+=================================================
 
 raja is a set of cache proxies tracking live resources changes and
 relations, synchronized using a socket.io bus.
