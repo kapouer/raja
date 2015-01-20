@@ -152,17 +152,22 @@ Raja.prototype.setio = function() {
 		if (!msg.url) return;
 		var data = msg.data;
 		if (data) delete msg.data;
-		var resource = self.resources[msg.url];
-		if (resource) {
-			if (!resource.mtime || msg.mtime > resource.mtime) resource.mtime = msg.mtime;
-		}
-		if (msg.mtime > self.mtime) {
+		var fresh = msg.mtime > self.mtime;
+		if (fresh) {
 			self.mtime = msg.mtime;
-			if (msg.url != self.url && !resource) {
-				// a static file has changed
+		}
+		var parents = msg.parents;
+		parents.unshift(msg.url);
+		for (var i=0; i < parents.length; i++) {
+			var url = parents[i];
+			var resource = self.resources[url];
+			if (resource) {
+				if (!resource.mtime || msg.mtime > resource.mtime) resource.mtime = msg.mtime;
+				self.emit(msg.url, data, msg);
+			} else if (fresh && url != self.url) {
+				// some dependency that isn't a resource - a static file ? - has changed
 			}
 		}
-		self.emit(msg.url, data, msg);
 	});
 };
 
