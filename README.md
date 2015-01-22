@@ -154,9 +154,9 @@ raja client utilities
 * Raja.METHOD(url, <query>, <body>, cb) where METHOD is GET, PUT, POST, DELETE.  
   A xhr wrapper, returns json or text, cb(err, objOrText), err.code contains status.
 
-* Raja.setQuery(url, queryObj) to append query parameters (as hash) to a url
+* Raja.appendQuery(url, queryObj) to append query parameters (as hash) to a url
 
-* Raja.insertScript(url, cb) to insert a script in the document (but not let it
+* Raja.loadScript(url, cb) to insert a script in the document (but not let it
 appear in the html afterwise)
 
 
