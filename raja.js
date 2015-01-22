@@ -26,7 +26,7 @@ Raja.prototype.delay = function(url, listener) {
 };
 
 Raja.prototype.ready = function() {
-	this.url = Raja.absolute('.');
+	this.url = absolute('.');
 	// work around webkit bug https://bugs.webkit.org/show_bug.cgi?id=4363
 	var lastMod = Date.parse(document.lastModified);
 	var now = new Date();
@@ -87,7 +87,7 @@ Raja.prototype.on = function(url, listener) {
 			self.emit('error', e);
 		}
 	};
-	url = Raja.absolute(url);
+	url = absolute(url);
 	var murl = url.split('?').shift();
 	this._on(murl, plistener);
 	var resources = this.resources;
@@ -111,7 +111,7 @@ Raja.prototype.on = function(url, listener) {
 		}
 		// resource has not been loaded, is not loading. Proceed
 		resource.queue = [listener];
-		var xhr = Raja.GET(url, function(err, obj) {
+		var xhr = Raja.prototype.GET(url, function(err, obj) {
 			if (err) {
 				resource.error = err;
 				return next(err);
@@ -182,9 +182,9 @@ function absolute(url) {
 		url = path + url.substring(1);
 	}
 	// regular interpretation of url
-	if (!Raja.absolute.a) Raja.absolute.a = document.createElement('a');
-	Raja.absolute.a.href = url;
-	return Raja.absolute.a.href;
+	if (!absolute.a) absolute.a = document.createElement('a');
+	absolute.a.href = url;
+	return absolute.a.href;
 }
 Raja.prototype.absolute = absolute;
 
@@ -207,7 +207,7 @@ function appendQuery(url, obj) {
 Raja.prototype.appendQuery = appendQuery;
 
 for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
-	Raja[method] = (function(method) { return function(url, query, body, cb) {
+	Raja.prototype[method] = (function(method) { return function(url, query, body, cb) {
 		if (!cb) {
 			if (typeof body == "function") {
 				cb = body;
@@ -221,7 +221,7 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 				};
 			}
 		}
-		url = Raja.absolute(url);
+		url = absolute(url);
 		// consume url parameters from query object (even if it is a body)
 		if (query) {
 			url = url.replace(/\/:(\w+)/g, function(str, name) {
