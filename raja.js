@@ -171,7 +171,7 @@ Raja.prototype.setio = function() {
 	});
 };
 
-Raja.absolute = function(url) {
+function absolute(url) {
 	if (/^https?/i.test(url)) return url;
 	var path = document.location.pathname;
 	if (url.indexOf('..') == 0) {
@@ -185,7 +185,8 @@ Raja.absolute = function(url) {
 	if (!Raja.absolute.a) Raja.absolute.a = document.createElement('a');
 	Raja.absolute.a.href = url;
 	return Raja.absolute.a.href;
-};
+}
+Raja.prototype.absolute = absolute;
 
 function appendQuery(url, obj) {
 	if (!obj) return url;
@@ -203,7 +204,7 @@ function appendQuery(url, obj) {
 	}
 	return url;
 }
-Raja.appendQuery = appendQuery;
+Raja.prototype.appendQuery = appendQuery;
 
 for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 	Raja[method] = (function(method) { return function(url, query, body, cb) {
@@ -290,7 +291,7 @@ function loadScript(url, cb) {
 	// Circumvent IE6 bugs with base elements
 	document.head.insertBefore(script, document.head.firstChild);
 }
-Raja.loadScript = loadScript;
+Raja.prototype.loadScript = loadScript;
 
 function tryJSON(txt) {
 	var obj;

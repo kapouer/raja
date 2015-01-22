@@ -151,13 +151,16 @@ Typical figures:
 raja client utilities
 =====================
 
-* Raja.METHOD(url, <query>, <body>, cb) where METHOD is GET, PUT, POST, DELETE.  
+* raja.METHOD(url, <query>, <body>, cb) where METHOD is GET, PUT, POST, DELETE.  
   A xhr wrapper, returns json or text, cb(err, objOrText), err.code contains status.
 
-* Raja.appendQuery(url, queryObj) to append query parameters (as hash) to a url
+* raja.appendQuery(url, queryObj) to append query parameters (as hash) to a url
 
-* Raja.loadScript(url, cb) to insert a script in the document (but not let it
+* raja.loadScript(url, cb) to insert a script in the document (but not let it
 appear in the html afterwise)
+
+* raja.absolute(relativeUrl) converts a url (with ./ or ../) relative to the
+document location into an absolute one.
 
 
 live updates and the idempotency rule
