@@ -148,6 +148,18 @@ Typical figures:
 * getting a copy from current cached instance ~ 6 ms
 
 
+raja client utilities
+=====================
+
+* Raja.METHOD(url, <query>, <body>, cb) where METHOD is GET, PUT, POST, DELETE.  
+  A xhr wrapper, returns json or text, cb(err, objOrText), err.code contains status.
+
+* Raja.setQuery(url, queryObj) to append query parameters (as hash) to a url
+
+* Raja.insertScript(url, cb) to insert a script in the document (but not let it
+appear in the html afterwise)
+
+
 live updates and the idempotency rule
 =====================================
 
