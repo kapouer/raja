@@ -5,7 +5,7 @@
 
 window.raja = new Raja();
 
-insertScript('/socket.io/socket.io.js', function(err) {
+loadScript('/socket.io/socket.io.js', function(err) {
 	if (err) throw err;
 	var proto = io.Manager.prototype;
 	raja._on = proto.on;
@@ -187,7 +187,7 @@ Raja.absolute = function(url) {
 	return Raja.absolute.a.href;
 };
 
-Raja.setQuery = function(url, obj) {
+function appendQuery(url, obj) {
 	if (!obj) return url;
 	var comps = [];
 	var str;
@@ -202,7 +202,8 @@ Raja.setQuery = function(url, obj) {
 		url += comps.join('&');
 	}
 	return url;
-};
+}
+Raja.appendQuery = appendQuery;
 
 for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 	Raja[method] = (function(method) { return function(url, query, body, cb) {
@@ -240,7 +241,7 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 			}
 			if (body) body = JSON.stringify(body);
 		}
-		url = setQuery(url, query);
+		url = appendQuery(url, query);
 		var xhr = new XMLHttpRequest();
 		xhr.open(method, url, true);
 		xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
@@ -262,7 +263,7 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 	};})(method);
 }
 
-Raja.insertScript = function(url, cb) {
+function loadScript(url, cb) {
 	var script = document.createElement("script");
 	script.async = true;
 	script.type = 'text/javascript';
@@ -286,7 +287,8 @@ Raja.insertScript = function(url, cb) {
 	};
 	// Circumvent IE6 bugs with base elements
 	document.head.insertBefore(script, document.head.firstChild);
-};
+}
+Raja.loadScript = loadScript;
 
 function tryJSON(txt) {
 	var obj;
