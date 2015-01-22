@@ -250,7 +250,7 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 				var code = xhr.status;
 				var response = tryJSON(xhr.responseText);
 				if (code >= 200 && code < 400) {
-					cb(code, response);
+					cb(null, response);
 				} else {
 					var err = new Error(response);
 					err.code = code;
