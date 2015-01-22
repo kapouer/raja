@@ -5,7 +5,7 @@
 
 window.raja = new Raja();
 
-script('/socket.io/socket.io.js', function(err) {
+insertScript('/socket.io/socket.io.js', function(err) {
 	if (err) throw err;
 	var proto = io.Manager.prototype;
 	raja._on = proto.on;
@@ -26,7 +26,7 @@ Raja.prototype.delay = function(url, listener) {
 };
 
 Raja.prototype.ready = function() {
-	this.url = this.absolute('.');
+	this.url = Raja.absolute('.');
 	// work around webkit bug https://bugs.webkit.org/show_bug.cgi?id=4363
 	var lastMod = Date.parse(document.lastModified);
 	var now = new Date();
@@ -87,7 +87,7 @@ Raja.prototype.on = function(url, listener) {
 			self.emit('error', e);
 		}
 	};
-	url = this.absolute(url);
+	url = Raja.absolute(url);
 	var murl = url.split('?').shift();
 	this._on(murl, plistener);
 	var resources = this.resources;
@@ -111,12 +111,12 @@ Raja.prototype.on = function(url, listener) {
 		}
 		// resource has not been loaded, is not loading. Proceed
 		resource.queue = [listener];
-		Raja.xhr(url, function(err, txt, mtime) {
-			var obj = tryJSON(txt);
+		var xhr = Raja.GET(url, function(err, obj) {
 			if (err) {
 				resource.error = err;
 				return next(err);
 			}
+			var mtime = tryDate(xhr.getResponseHeader("Last-Modified"));
 			self.link(resource.url);
 			resource.mtime = mtime;
 			resource.data = obj;
@@ -171,7 +171,7 @@ Raja.prototype.setio = function() {
 	});
 };
 
-Raja.prototype.absolute = function(url) {
+Raja.absolute = function(url) {
 	if (/^https?/i.test(url)) return url;
 	var path = document.location.pathname;
 	if (url.indexOf('..') == 0) {
@@ -182,28 +182,87 @@ Raja.prototype.absolute = function(url) {
 		url = path + url.substring(1);
 	}
 	// regular interpretation of url
-	if (!this._a) this._a = document.createElement('a');
-	this._a.href = url;
-	return this._a.href;
+	if (!Raja.absolute.a) Raja.absolute.a = document.createElement('a');
+	Raja.absolute.a.href = url;
+	return Raja.absolute.a.href;
 };
 
-Raja.xhr = function(url, cb) {
-	var req = new XMLHttpRequest();
-	req.open('GET', url, true);
-	req.onreadystatechange = function (e) {
-		if (req.readyState == 4) {
-			if (req.status >= 200 && req.status < 300) {
-				cb(null, req.responseText, tryDate(req.getResponseHeader("Last-Modified")));
+Raja.setQuery = function(url, obj) {
+	if (!obj) return url;
+	var comps = [];
+	var str;
+	for (var k in obj) {
+		str = encodeURIComponent(k);
+		if (obj[k] != null) str += '=' + encodeURIComponent(obj[k]);
+		comps.push(str);
+	}
+	if (comps.length) {
+		if (url.indexOf('?') > 0) url += '&';
+		else url += '?';
+		url += comps.join('&');
+	}
+	return url;
+};
+
+for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
+	Raja[method] = (function(method) { return function(url, query, body, cb) {
+		if (!cb) {
+			if (typeof body == "function") {
+				cb = body;
+				body = null;
+			} else if (typeof query == "function") {
+				cb = query;
+				query = null;
 			} else {
-				cb(req.status, req.responseText);
+				cb = function() {};
 			}
 		}
-	};
-	req.send(null);
-	return req;
-};
+		url = Raja.absolute(url);
+		// consume url parameters from query object (even if it is a body)
+		if (query) {
+			url = url.replace(/\/:(\w+)/g, function(str, name) {
+				var val = query[name];
+				if (val != null) {
+					delete query[name];
+					return '/' + val;
+				} else {
+					return '/:' + name;
+				}
+			});
+		}
+		if (/^(HEAD|GET|COPY)$/i.test(method)) {
+			query = query || body || {};
+		} else {
+			// give priority to body
+			if (!body && query) {
+				body = query;
+				query = null;
+			}
+			if (body) body = JSON.stringify(body);
+		}
+		url = setQuery(url, query);
+		var xhr = new XMLHttpRequest();
+		xhr.open(method, url, true);
+		xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
+		xhr.onreadystatechange = function (e) {
+			if (xhr.readyState == 4) {
+				var code = xhr.status;
+				var response = tryJSON(xhr.responseText);
+				if (code >= 200 && code < 400) {
+					cb(code, response);
+				} else {
+					var err = new Error(response);
+					err.code = code;
+					cb(err);
+				}
+			}
+		};
+		xhr.send(body);
+		return xhr;
+	};})(method);
+}
 
-function script(url, cb) {
+Raja.insertScript = function(url, cb) {
 	var script = document.createElement("script");
 	script.async = true;
 	script.type = 'text/javascript';
@@ -227,7 +286,7 @@ function script(url, cb) {
 	};
 	// Circumvent IE6 bugs with base elements
 	document.head.insertBefore(script, document.head.firstChild);
-}
+};
 
 function tryJSON(txt) {
 	var obj;
