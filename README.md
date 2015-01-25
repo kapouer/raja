@@ -33,10 +33,12 @@ app.set('statics', process.cwd() + '/public');
 // start raja store, socket.io server, socket.io client
 var raja = require('raja')({
 	store: "sqlite://raja.db",
-	io: {
-		uri: "http://localhost:7000", // the uri the client connects to
-		server: server								// spawns a socket.io server on it
-	}
+	// the application namespace, used in socket.io or http headers
+	namespace: "test",
+	// where socket.io clients must connect (namespace will be appended)
+	client: "http://localhost:7000",
+	// spawns a socket.io server
+	server: server
 }, function(err) {
 	if (err) {
 		console.error(err);
