@@ -66,6 +66,19 @@ app.route('/rest/collection/:id?').all(
 	aRestCollectionMiddleware
 );
 
+// raja reverse proxy for remote resources
+// this route will be invalidated when the child resource is invalidated
+app.route('/rest/collection.rss').get(
+	raja.proxies.express().middleware,
+	function(req, res, next) {
+		// the getResource function converts url into an absolute url
+		// if it is given a remote url, it will watch it for changes
+		req.getResource('.', function(err, str) {
+			res.send(convertListToRSS(JSON.parse(str)));
+		});
+	}
+);
+
 server.listen(7000);
 ```
 
