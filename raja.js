@@ -26,7 +26,7 @@ Raja.prototype.delay = function(url, listener) {
 };
 
 Raja.prototype.ready = function() {
-	this.url = absolute('.');
+	this.url = absolute(document.location, '.');
 	// work around webkit bug https://bugs.webkit.org/show_bug.cgi?id=4363
 	var lastMod = Date.parse(document.lastModified);
 	var now = new Date();
@@ -87,7 +87,7 @@ Raja.prototype.on = function(url, listener) {
 			self.emit('error', e);
 		}
 	};
-	url = absolute(url);
+	url = absolute(document.location, url);
 	var murl = url.split('?').shift();
 	this._on(murl, plistener);
 	var resources = this.resources;
@@ -171,28 +171,45 @@ Raja.prototype.setio = function() {
 	});
 };
 
-function absolute(url) {
+function absolute(loc, url) {
 	if (/^https?/i.test(url)) return url;
-	var path = document.location.pathname;
+	var path = loc.pathname;
 	if (url.indexOf('..') == 0) {
 		path = path.split('/');
 		path.pop();
 		url = path.join('/') + url.substring(2);
 	} else if (url.indexOf('.') == 0) {
 		url = path + url.substring(1);
+	} else if (url.indexOf('/') != 0) {
+		var base = path.split('/');
+		base.pop();
+		base = base.join('/');
+		url = base + '/' + url;
 	}
-	// regular interpretation of url
-	if (!absolute.a) absolute.a = document.createElement('a');
-	absolute.a.href = url;
-	return absolute.a.href;
+	url = loc.protocol + '//' + loc.host + url;
+	return url;
 }
 Raja.prototype.absolute = absolute;
 
-function appendQuery(url, obj) {
-	if (!obj) return url;
+function urlParams(url, params) {
+	if (!params) return url;
+	return url.replace(/\/:(\w+)/g, function(str, name) {
+		var val = params[name];
+		if (val != null) {
+			delete params[name];
+			return '/' + val;
+		} else {
+			return '/:' + name;
+		}
+	});
+}
+Raja.prototype.urlParams = urlParams;
+
+function urlQuery(url, query) {
+	if (!query) return url;
 	var comps = [];
 	var str;
-	for (var k in obj) {
+	for (var k in query) {
 		str = encodeURIComponent(k);
 		if (obj[k] != null) str += '=' + encodeURIComponent(obj[k]);
 		comps.push(str);
@@ -204,7 +221,7 @@ function appendQuery(url, obj) {
 	}
 	return url;
 }
-Raja.prototype.appendQuery = appendQuery;
+Raja.prototype.urlQuery = urlQuery;
 
 for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 	Raja.prototype[method] = (function(method) { return function(url, query, body, cb) {
@@ -221,19 +238,9 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 				};
 			}
 		}
-		url = absolute(url);
-		// consume url parameters from query object (even if it is a body)
-		if (query) {
-			url = url.replace(/\/:(\w+)/g, function(str, name) {
-				var val = query[name];
-				if (val != null) {
-					delete query[name];
-					return '/' + val;
-				} else {
-					return '/:' + name;
-				}
-			});
-		}
+		// consume parameters from query object
+		url = urlParams(url, query);
+		url = absolute(document.location, url);
 		if (/^(HEAD|GET|COPY)$/i.test(method)) {
 			query = query || body || {};
 		} else {
@@ -244,7 +251,7 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 			}
 			if (body) body = JSON.stringify(body);
 		}
-		url = appendQuery(url, query);
+		url = urlQuery(url, query);
 		var xhr = new XMLHttpRequest();
 		xhr.open(method, url, true);
 		xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
