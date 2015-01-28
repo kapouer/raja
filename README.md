@@ -49,6 +49,12 @@ var raja = require('raja')({
 // raja proxy for express-dom
 raja.proxies.dom(dom);
 
+// it's possible to listen to all events using
+raja.on('message', function(msg) {
+	var lastUrl = msg.parents.slice(-1).pop() || msg.url;
+	if (lastUrl == "someresource") // do something
+});
+
 // raja proxy for static assets
 app.route(/^\/(css|img|js)\//).get(
 	raja.proxies.static(app.get('statics')),
