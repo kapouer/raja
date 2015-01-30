@@ -20,8 +20,8 @@ function Raja() {
 	this.base = document.getElementById('raja-io').content;
 }
 
-Raja.prototype.delay = function(url, listener) {
-	this.delays.push([url, listener]);
+Raja.prototype.delay = function(url, query, listener) {
+	this.delays.push([url, query, listener]);
 	return this;
 };
 
@@ -45,7 +45,7 @@ Raja.prototype.ready = function() {
 	var list = this.delays;
 	delete this.delays;
 	for (var i=0; i < list.length; i++) {
-		this.on(list[i][0], list[i][1]);
+		this.on.apply(this, list[i]);
 	}
 };
 
@@ -73,9 +73,13 @@ Raja.prototype.emit = function(what) {
 	}
 };
 
-Raja.prototype.on = function(url, listener) {
+Raja.prototype.on = function(url, query, listener) {
+	if (!listener && typeof query == "function") {
+		listener = query;
+		query = null;
+	}
 	if (!this.resources) {
-		return this.delay(url, listener);
+		return this.delay(url, query, listener);
 	}
 	if (!this.io) this.setio();
 	var self = this;
@@ -88,30 +92,36 @@ Raja.prototype.on = function(url, listener) {
 		}
 	};
 	url = absolute(document.location, url);
-	var murl = url.split('?').shift();
-	this._on(murl, plistener);
+	this._on(url, plistener);
 	var resources = this.resources;
-	var resource = resources[murl];
-	if (!resource) resource = resources[murl] = {url: murl};
+	var resource = resources[url];
+	if (!resource) resource = resources[url] = {url: url, requests: {}};
 	if (resource.error) return;
 
+	var xurl = urlQuery(url, query);
+
 	(function(next) {
-		if (resource.data !== undefined) {
-			// resource has been loaded once
-			// this is wrong when murl != url
-			listener(resource.data, {method:"get", url: url, mtime: resource.mtime});
+		var reqs = resource.requests;
+		var queues = resource.queues || {};
+		if (reqs[xurl] !== undefined) {
+			listener(reqs[xurl].data, {
+				method:"get",
+				url: url,
+				query: reqs[xurl].query,
+				mtime: resource.mtime
+			});
 			return next();
 		} else if (resource.mtime !== undefined) {
 			// resource merged, just join it
 			return next();
-		} else if (resource.queue) {
+		} else if (queues[xurl]) {
 			// resource is currently loading
-			resource.queue.push(listener);
+			queues.push(listener);
 			return;
 		}
 		// resource has not been loaded, is not loading. Proceed
-		resource.queue = [listener];
-		var xhr = Raja.prototype.GET(url, function(err, obj) {
+		queues[xurl] = [listener];
+		var xhr = Raja.prototype.GET(xurl, function(err, obj) {
 			if (err) {
 				resource.error = err;
 				return next(err);
@@ -119,16 +129,24 @@ Raja.prototype.on = function(url, listener) {
 			var mtime = tryDate(xhr.getResponseHeader("Last-Modified"));
 			self.link(resource.url);
 			resource.mtime = mtime;
-			resource.data = obj;
-			var queue = resource.queue;
+			reqs[xurl] = {
+				data: obj,
+				query: query
+			};
+			var queue = queues[xurl];
 			for (var i=0; i < queue.length; i++) {
 				try {
-					queue[i](obj, {method:"get", url: url, mtime: mtime});
+					queue[i](obj, {
+						method:"get",
+						url: url,
+						query: query,
+						mtime: mtime
+					});
 				} catch(e) {
 					console.error(e);
 				}
 			}
-			delete resource.queue;
+			delete queues[xurl];
 			next();
 		});
 	})(function(err) {
