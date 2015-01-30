@@ -210,16 +210,22 @@ Raja.prototype.urlParams = urlParams;
 function urlQuery(url, query) {
 	if (!query) return url;
 	var comps = [];
-	var str;
-	for (var k in query) {
-		str = encodeURIComponent(k);
-		if (query[k] != null) str += '=' + encodeURIComponent(query[k]);
-		comps.push(str);
+	for (var k in query) comps.push[{key: k, val: query[k]}];
+	comps.sort(function(a, b) {
+		if (a.key < b.key) return 1;
+		else if (a.key > b.key) return -1;
+		else return 0;
+	});
+	var str, list = [];
+	for (var i=0; i < comps.length; i++) {
+		str = encodeURIComponent(comps[i].key);
+		if (comps[i].val != null) str += '=' + encodeURIComponent(comps[i].val);
+		list.push(str);
 	}
-	if (comps.length) {
+	if (list.length) {
 		if (url.indexOf('?') > 0) url += '&';
 		else url += '?';
-		url += comps.join('&');
+		url += list.join('&');
 	}
 	return url;
 }
