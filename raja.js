@@ -95,14 +95,16 @@ Raja.prototype.on = function(url, query, listener) {
 	this._on(url, plistener);
 	var resources = this.resources;
 	var resource = resources[url];
-	if (!resource) resource = resources[url] = {url: url, requests: {}};
+	if (!resource) resource = resources[url] = {url: url};
 	if (resource.error) return;
 
 	var xurl = urlQuery(url, query);
 
 	(function(next) {
 		var reqs = resource.requests;
-		var queues = resource.queues || {};
+		if (!resource.requests) reqs = resource.requests = {};
+		var queues = resource.queues;
+		if (!queues) queues = resource.queues = {};
 		if (reqs[xurl] !== undefined) {
 			listener(reqs[xurl].data, {
 				method:"get",
@@ -116,7 +118,7 @@ Raja.prototype.on = function(url, query, listener) {
 			return next();
 		} else if (queues[xurl]) {
 			// resource is currently loading
-			queues.push(listener);
+			queues[xurl].push(listener);
 			return;
 		}
 		// resource has not been loaded, is not loading. Proceed
