@@ -228,7 +228,7 @@ Raja.prototype.urlParams = urlParams;
 function urlQuery(url, query) {
 	if (!query) return url;
 	var comps = [];
-	for (var k in query) comps.push[{key: k, val: query[k]}];
+	for (var k in query) comps.push({key: k, val: query[k]});
 	comps.sort(function(a, b) {
 		if (a.key < b.key) return 1;
 		else if (a.key > b.key) return -1;
