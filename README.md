@@ -134,6 +134,21 @@ change.
 The whole cache is dropped when application is restarted - a simple way to
 prevent having an invalid cache.
 
+Inside an express middleware, one can fetch and declare a dependency on a
+resource (external or inside the application) using
+
+req.getResource(url, query, opts, cb)
+
+where query is optional, and opts can set two options:
+
+- poll : boolean, set to true if resource must be polled for changes until
+  the moment it is flushed from the cache
+
+- maxage : integer, seconds; default to 600 seconds.  
+  invalidates a resource after `maxage` seconds.  
+
+Combined with poll, maxage can ensure a resource is always up-to-date.
+
 
 raja client
 ===========
