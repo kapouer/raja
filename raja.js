@@ -92,53 +92,44 @@ Raja.prototype.on = function(url, query, listener) {
 		}
 	};
 	url = absolute(document.location, url);
+	url = urlQuery(url, query);
 	this._on(url, plistener);
 	var resources = this.resources;
 	var resource = resources[url];
 	if (!resource) resource = resources[url] = {url: url};
 	if (resource.error) return;
 
-	var xurl = urlQuery(url, query);
-
 	(function(next) {
 		var reqs = resource.requests;
-		if (!resource.requests) reqs = resource.requests = {};
-		var queues = resource.queues;
-		if (!queues) queues = resource.queues = {};
-		if (reqs[xurl] !== undefined) {
-			listener(reqs[xurl].data, {
+		if (resource.data !== undefined) {
+			listener(resource.data, {
 				method:"get",
 				url: url,
-				query: reqs[xurl].query,
 				mtime: resource.mtime
 			});
 			return next();
 		} else if (resource.mtime !== undefined) {
 			// resource merged, just join it
 			return next();
-		} else if (queues[xurl]) {
+		} else if (resource.queue) {
 			// resource is currently loading
-			queues[xurl].push(listener);
+			resource.queue.push(listener);
 			return;
 		}
 		// resource has not been loaded, is not loading. Proceed
-		queues[xurl] = [listener];
-		var xhr = Raja.prototype.GET(xurl, function(err, obj) {
+		resource.queue = [listener];
+		var xhr = Raja.prototype.GET(url, function(err, obj) {
 			if (err) {
 				resource.error = err;
 				return next(err);
 			}
 			var mtime = tryDate(xhr.getResponseHeader("Last-Modified"));
-			self.link(resource.url);
+			self.link(url);
 			resource.mtime = mtime;
-			reqs[xurl] = {
-				data: obj,
-				query: query
-			};
-			var queue = queues[xurl];
-			for (var i=0; i < queue.length; i++) {
+			resource.data = obj;
+			for (var i=0; i < resource.queue.length; i++) {
 				try {
-					queue[i](obj, {
+					resource.queue[i](obj, {
 						method:"get",
 						url: url,
 						query: query,
@@ -148,7 +139,7 @@ Raja.prototype.on = function(url, query, listener) {
 					console.error(e);
 				}
 			}
-			delete queues[xurl];
+			delete resource.queue;
 			next();
 		});
 	})(function(err) {
@@ -183,7 +174,7 @@ Raja.prototype.setio = function() {
 			var resource = self.resources[url];
 			if (resource) {
 				if (!resource.mtime || msg.mtime > resource.mtime) resource.mtime = msg.mtime;
-				self.emit(msg.url, data, msg);
+				self.emit(url, data, msg);
 			} else if (fresh && url != self.url) {
 				// some dependency that isn't a resource - a static file ? - has changed
 			}
