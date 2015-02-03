@@ -141,8 +141,9 @@ req.getResource(url, query, opts, cb)
 
 where query is optional, and opts can set two options:
 
-- poll : boolean, set to true if resource must be polled for changes until
-  the moment it is flushed from the cache
+- preload : boolean, set to true if resource must be polled for changes until
+  the moment it is flushed from the cache. Otherwise the resource is loaded
+  on demand after is it invalidated.
 
 - maxage : integer, seconds; default to 600 seconds.  
   invalidates a resource after `maxage` seconds.  
