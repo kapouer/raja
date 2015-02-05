@@ -38,7 +38,11 @@ var raja = require('raja')({
 	// where socket.io clients must connect (namespace will be appended)
 	client: "http://localhost:7000",
 	// spawns a socket.io server
-	server: server
+	server: server,
+	// install optional statics proxy - needed when using minify plugin
+	statics: app.get('statics'),
+	// install optional express-dom proxy
+	dom: dom
 }, function(err) {
 	if (err) {
 		console.error(err);
@@ -46,8 +50,18 @@ var raja = require('raja')({
 	}
 });
 
-// raja proxy for express-dom
-raja.proxies.dom(dom);
+/* minification and automatic edition of script, link tags
+ that have the "minify" attribute
+ <script minify src="jquery.js"></script> <!-- minifies to jquery.min.js -->
+ <script minify="lib.js" src="file1.js"></script>
+ <script minify="lib.js" src="file2.js"></script> <!-- concatenate and minify -->
+ will result in
+ <script src="jquery.min.js"></script>
+ <script src="lib.js"></script>
+ and changes in dependencies are propagated with the help of raja infrastructure
+*/
+
+dom.author(raja.plugins.minify);
 
 // it's possible to listen to all events using
 raja.on('message', function(msg) {
@@ -68,18 +82,18 @@ app.route('/index').get(dom('index'));
 
 // raja proxy for http backend
 app.route('/rest/collection/:id?').all(
-	raja.proxies.express().middleware,
+	raja.proxies.express.middleware,
 	aRestCollectionMiddleware
 );
 
 // raja reverse proxy for remote resources
 // this route will be invalidated when the child resource is invalidated
 app.route('/rest/collection.rss').get(
-	raja.proxies.express().middleware,
+	raja.proxies.express.middleware,
 	function(req, res, next) {
 		// the getResource function converts url into an absolute url
 		// if it is given a remote url, it will watch it for changes
-		req.getResource('.', function(err, str) {
+		req.resource.load('.', function(err, str) {
 			res.send(convertListToRSS(JSON.parse(str)));
 		});
 	}
