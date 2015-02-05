@@ -91,10 +91,14 @@ app.route('/rest/collection/:id?').all(
 app.route('/rest/collection.rss').get(
 	raja.proxies.express.middleware,
 	function(req, res, next) {
-		// the getResource function converts url into an absolute url
-		// if it is given a remote url, it will watch it for changes
-		req.resource.load('.', function(err, str) {
-			res.send(convertListToRSS(JSON.parse(str)));
+		// req.resource represents the requested url
+		// and exposes a 'load' method that uses remote proxy
+		// and is tracked by express proxy to cache resources
+		// and their dependencies - the remote proxy has maxage
+		// and preload support in such a way it can update
+		// without blocking
+		req.resource.load('/rest/collection', function(err, str) {
+			res.send(convertJSONToRSS(JSON.parse(str)));
 		});
 	}
 );
