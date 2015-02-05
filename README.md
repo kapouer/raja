@@ -1,8 +1,20 @@
 raja - synchronized cache proxies for express-dom
 =================================================
 
-raja is a set of cache proxies tracking live resources changes and
-relations, synchronized using a socket.io bus.
+Raja is a set of proxies, middlewares, working with
+express, express-dom, or with any remote http resources,
+designed to cache and render DOM using javascript inside a real
+client (webkitgtk for now) and trace the dependencies tree
+for changes, propagate those changes using socket.io, so it can
+keep all caches of resources in sync.
+
+A typical web page developed with raja does not have to use
+any of its client API - only if wants to benefit from live updates,
+and even there it could directly connect to using socket.io client.
+
+raja is *agnostic* in its design - any server-side DOM rendering could
+in principle be done on top of it.
+
 
 Core proxies are
 - local or remote files
@@ -115,14 +127,15 @@ Client-side development
 index.html uses some index.js to request /rest/collection and merge returned
 data into DOM.
 
-express-dom
------------
+Server-side rendering by express-dom
+------------------------------------
 
-When a client requests "http://localhost:7000/index", this module spawns a DOM
-into the server (using webkitgtk or else), and run index.html at the given url.
+When a client requests "http://localhost:7000/index", this express middleware
+spawns a web page into the server (using webkitgtk or else), and load index.html
+in it as if it was on a real client browser - at the requested url.
 
-Once this page is idle (no pending requests, no repaints, no activity) it
-is serialized and sent to the client.
+Once this page is idle (no pending requests, no repaints, no long timeouts, no activity)
+it is serialized and sent to the client.
 
 
 resource tracking, cache synchronization with raja
@@ -150,12 +163,13 @@ Similar invalidation messages are sent if index.html or index.js local files
 change.
 
 The whole cache is dropped when application is restarted - a simple way to
-prevent having an invalid cache.
+prevent having an invalid cache (in a future version the cache will stay around,
+and be invalidated instead of cleaned).
 
 Inside an express middleware, one can fetch and declare a dependency on a
 resource (external or inside the application) using
 
-req.getResource(url, query, opts, cb)
+req.resource.load(url, query, opts, cb)
 
 where query is optional, and opts can set two options:
 
@@ -166,7 +180,8 @@ where query is optional, and opts can set two options:
 - maxage : integer, seconds; default to 600 seconds.  
   invalidates a resource after `maxage` seconds.  
 
-Combined with poll, maxage can ensure a resource is always up-to-date.
+Combined with preload, maxage can ensure a resource is always up-to-date,
+and has the effect of always immediately sending the cached version without delay.
 
 
 raja client
@@ -179,8 +194,12 @@ the client will actually perform a XHR GET request to that url, and call
 `listener(data, meta)`.
 
 Just after that, it automatically connects to the socket.io server and join
-the "http://localhost:7000/index" room - a room that receives all raja proxies
-messages concerning resources upon which that web page depends.
+the "http://localhost:7000/index.html" room - a room that receives all raja proxies
+messages concerning resources upon which that web page at that url depends.
+
+For example it receives messages about static js, css file changes, minified versions
+changes, HTTP resources changes (if they are proxied by raja), html changes,
+or even changes made by javascript code running live on that page.
 
 If a resource change, the listener is responsible for taking appropriate action,
 like merging further data, removing, modifying collection entries.
@@ -192,19 +211,22 @@ that was kept living, since when the invalidation message is received the page
 is already being updated live on the server.
 
 The result of this approach is that we can transform any web page using the DOM
-and javascript, a costly process, and be able to update build an up-to-date
+and javascript, a costly process, and be able to build an up-to-date
 copy of the html very quickly, without having to reload the page.
 
 Typical figures:
 * building a web page from scratch using express-dom and several http
-	resources ~ 2 seconds
+  resources ~ 1 second on first launch (even modules are not all yet
+  all loaded)   
 * getting a refreshed copy of a web page after modification of an http
-	resource and reception of the raja synchronization message ~ 60 ms
+  resource and reception of the raja synchronization message ~ 50 ms
 * getting a copy from current cached instance ~ 6 ms
 
 
 raja client utilities
 =====================
+
+* raja.on(url, <query>, listener)
 
 * raja.METHOD(url, <query>, <body>, cb) where METHOD is GET, PUT, POST, DELETE.  
   A xhr wrapper, returns json or text, cb(err, objOrText), err.code contains status.
@@ -226,7 +248,11 @@ then sent to the client, and can receive synchronization messages there,
 it is important to make sure the code merging data into the DOM can be
 idempotent.
 
-See http://github.com/kapouer/domt for such a library.
+Isomorphic frameworks willing to support server-side rendering all follow
+more or less that same basic principle.
+
+A very simple, dirty but funny to use implementation of an idempotent
+DOM merging tool is http://github.com/kapouer/domt (well tested and maintained).
 
 
 synchronization messages format
@@ -244,8 +270,8 @@ See also doc/REST.md.
 }
 ```
 
-Raja populates the parents list whenever a parent is found.
+Raja populates the parents list whenever a parent is found in the relations stored
+in the caches of its various proxies.
 It can be initially filled - it typically happens when acting upon an element
 of a collection, in which case the first url in the list is the url of the
-collection.
-
+collection, see doc/.
