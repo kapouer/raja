@@ -71,7 +71,7 @@ raja.on('message', function(msg) {
 
 // raja proxy for static assets
 app.route(/^\/(css|img|js)\//).get(
-	raja.proxies.static(app.get('statics')),
+	raja.proxies.statics,
 	express.static(app.get('statics'))
 );
 
