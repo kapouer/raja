@@ -39,10 +39,10 @@
     "socket.io-client": "^1.3.3"
   },
   "peerDependencies": {
-    "express-dom": "^2.7.0"
+    "express-dom": "^2.8.0"
   },
   "devDependencies": {
     "express": "^4.10.2",
-    "express-dom": "0.0.x"
+    "express-dom": "^2.8.0"
   }
 }
