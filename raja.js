@@ -33,9 +33,8 @@ Raja.prototype.ready = function() {
 	var diff = (new Date(now.toLocaleString())).getTimezoneOffset() - now.getTimezoneOffset();
 	if (!diff) diff = now.getTimezoneOffset() * 60000;
 	else diff = 0;
-	this.mtime = lastMod - diff;
-
-	if (isNaN(this.mtime)) this.mtime = Date.now();
+	lastMod = lastMod - diff;
+	this.mtime = isNaN(lastMod) ? now : new Date(lastMod);
 	this.resources = {};
 	var links = document.head.querySelectorAll('link[rel="resource"]');
 	for (var i=0; i < links.length; i++) {
@@ -156,13 +155,15 @@ Raja.prototype.setio = function() {
 	});
 	this.io.emit('join', {
 		room: this.url,
-		mtime: this.mtime
+		mtime: this.mtime.getTime()
 	});
 
 	this.io.on('message', function(msg) {
 		if (!msg.url) return;
 		var data = msg.data;
 		if (data) delete msg.data;
+		var mtime = tryDate(msg.mtime);
+		if (mtime) msg.mtime = mtime;
 		var fresh = msg.mtime > self.mtime;
 		if (fresh) {
 			self.mtime = msg.mtime;
@@ -334,7 +335,7 @@ function tryDate(txt) {
 	var date = new Date(txt);
 	var time = date.getTime();
 	if (isNaN(time)) return;
-	else return time;
+	else return date;
 }
 
 function $(str) {
