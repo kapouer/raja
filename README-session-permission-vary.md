@@ -76,7 +76,7 @@ because of how the permissions to read /user/* are declared:
   app.route(/user/:name).get(
     allow(function() {
       if (req.params.name == req.session.name) return true;
-    }, 'admin'), // <- in that order
+    }, 'admin'), // in that order
     resources.users.GET
   )
 
@@ -151,6 +151,48 @@ willing to find a hit can be larger than the list of permissions in the vary fie
 Basically, everything's all right as long as there is not too much entries
 in the cache :() and that happens the moment a web site shows login info
 on all its html pages and has many users.
+
+How does Vary matching work ?
+
+A request is presented to the cache with
+
+url: url0
+permissions: pa, pb, pc
+accept-encoding: gzip, deflate // TODO check what happens with *
+
+and the cache has these entries
+
+0 url0
+1 permissions=pa,pc url0
+2 permissions=pa,pc&encoding=gzip url0
+3 permissions=pa url0
+4 permissions=pb,pc url0
+5 permissions=pf,pg url0
+
+The match is done by constructing several url and searching them in the cache.
+Each constructed url is built out of a combination of the variable fields the
+request has:
+(omitting the permissions= start)
+pa url0
+pb url0
+pc url0
+pa,pb url0
+pa,pc url0
+pb,pc url0
+
+the match with the most permissions is used - here it would be 1 or 4.
+That conflict is resolved by choosing the most up-to-date entry.
+In a correct application cache, it wouldn't happen: the same url0 cannot
+depend on non-mutually-exclusive permissions:
+
+pa,pb url0
+pa,pc url0
+
+can exist in the cache, in which case the application never grant permissions
+pb AND pc to the same user.
+
+This mecanism supports only (and obviously) very small permissions sets.
+The smaller number of permissions required to view a page, the better.
 
 
 Do not mis-evict entries from LFU
