@@ -43,6 +43,6 @@
   },
   "devDependencies": {
     "express": "^4.10.2",
-    "express-dom": "^2.8.0"
+    "express-dom": "^2.9.0"
   }
 }
