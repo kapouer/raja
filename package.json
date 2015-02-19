@@ -1,7 +1,7 @@
 {
   "name": "raja",
   "version": "0.12.4",
-  "description": "express-dom cache plugin managing resources and live synchronisation",
+  "description": "distributed cache tracking resources, pages, assets, builds and their dependencies",
   "main": "lib/core.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -16,7 +16,9 @@
     "cache",
     "resource",
     "live",
-    "synchro"
+    "synchro",
+    "isomorphic",
+    "distributed"
   ],
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
