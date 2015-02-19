@@ -171,7 +171,7 @@ Raja.prototype.setio = function() {
 		var parents = msg.parents;
 		parents.unshift(msg.url);
 		for (var i=0; i < parents.length; i++) {
-			var url = parents[i];
+			var url = keyToUrl(parents[i]);
 			var resource = self.resources[url];
 			if (resource) {
 				if (!resource.mtime || msg.mtime > resource.mtime) resource.mtime = msg.mtime;
@@ -340,6 +340,14 @@ function tryDate(txt) {
 
 function $(str) {
 	return document.querySelector(str);
+}
+
+function keyToUrl(key) {
+	var find = /^(.*\s)?(https?:\/\/.+)$/.exec(key);
+	if (find != null && find.length == 3) {
+		if (find[2]) return find[2];
+	}
+	return key;
 }
 
 
