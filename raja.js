@@ -3,20 +3,9 @@
  */
 (function() {
 
-var raja = window.raja = new Raja();
-
-loadScript('/socket.io/socket.io.js', function(err) {
-	if (err) throw err;
-	var proto = io.Manager.prototype;
-	raja._on = proto.on;
-	raja._emit = proto.emit;
-	raja.off = proto.off;
-	raja.listeners = proto.listeners;
-	raja.ready();
-});
-
 function Raja() {
 	this.delays = [];
+	this.ready();
 }
 
 Raja.prototype.delay = function(url, query, listener) {
@@ -26,8 +15,24 @@ Raja.prototype.delay = function(url, query, listener) {
 
 Raja.prototype.ready = function() {
 	this.root = document.getElementById('raja');
-	if (!io || !this.root) return;
-	this.iopool = (this.root.getAttribute('io') || '').split(' ');
+	if (!this.root) return;
+	var self = this;
+	if (!this.pool) {
+		this.pool = (this.root.getAttribute('client') || '').split(' ');
+		loadScript(randomEl(this.pool) + '/socket.io/socket.io.js', function(err) {
+			if (err) throw err;
+			var proto = io.Manager.prototype;
+			self._on = proto.on;
+			self._emit = proto.emit;
+			self.off = proto.off;
+			self.listeners = proto.listeners;
+			self.ready();
+		});
+		this.namespace = this.root.getAttribute('namespace') || '';
+	}
+	if (!window.io) {
+		return;
+	}
 
 	this.url = absolute(document.location, '.');
 	var lastMod = this.root.getAttribute('last-modified');
@@ -148,7 +153,7 @@ Raja.prototype.on = function(url, query, listener) {
 };
 
 Raja.prototype.setio = function() {
-	this.io = io(randomEl(this.iopool));
+	this.io = io(randomEl(this.pool) + '/' + this.namespace);
 	var self = this;
 	this.io.once('reconnect_failed', function(err) {
 		if (err) self.emit('error', err);
@@ -361,5 +366,6 @@ function keyToUrl(key) {
 	return key;
 }
 
+window.raja = new Raja();
 
 })();
