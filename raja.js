@@ -3,7 +3,7 @@
  */
 (function() {
 
-window.raja = new Raja();
+var raja = window.raja = new Raja();
 
 loadScript('/socket.io/socket.io.js', function(err) {
 	if (err) throw err;
@@ -17,8 +17,6 @@ loadScript('/socket.io/socket.io.js', function(err) {
 
 function Raja() {
 	this.delays = [];
-	this.meta = document.getElementById('raja');
-	this.base = this.meta.content;
 }
 
 Raja.prototype.delay = function(url, query, listener) {
@@ -27,8 +25,12 @@ Raja.prototype.delay = function(url, query, listener) {
 };
 
 Raja.prototype.ready = function() {
+	this.root = document.getElementById('raja');
+	if (!io || !this.root) return;
+	this.iopool = (this.root.getAttribute('io') || '').split(' ');
+
 	this.url = absolute(document.location, '.');
-	var lastMod = this.meta.getAttribute('last-modified');
+	var lastMod = this.root.getAttribute('last-modified');
 	var now = new Date();
 	if (!lastMod) {
 		// work around webkit bug https://bugs.webkit.org/show_bug.cgi?id=4363
@@ -39,12 +41,10 @@ Raja.prototype.ready = function() {
 		lastMod = lastMod - diff;
 	}
 	this.mtime = isNaN(lastMod) ? now : new Date(lastMod);
-	this.meta.setAttribute('last-modified', this.mtime.getTime());
-	this.resources = {};
-	var links = document.head.querySelectorAll('link[rel="resource"]');
-	for (var i=0; i < links.length; i++) {
-		var link = links.item(i);
-		this.resources[link.href] = {url: link.href, mtime: this.mtime};
+	this.root.setAttribute('last-modified', this.mtime.getTime());
+	this.resources = JSON.parse(this.root.getAttribute('resources')) || {};
+	for (var url in this.resources) {
+		this.resources[url] = {mtime: tryDate(this.resources[url])};
 	}
 	var list = this.delays;
 	delete this.delays;
@@ -53,15 +53,10 @@ Raja.prototype.ready = function() {
 	}
 };
 
-Raja.prototype.link = function(url) {
-	var link = $('head > link[rel="resource"][href="'+url+'"]');
-	if (link) return;
-	link = document.createElement('link');
-	link.rel = "resource";
-	link.href = url;
-	var tn = document.createTextNode("\n");
-	document.head.insertBefore(link, document.head.firstChild);
-	document.head.insertBefore(tn, link);
+Raja.prototype.update = function() {
+	var resources = {};
+	for (var url in this.resources) resources[url] = this.resources[url].mtime;
+	this.root.setAttribute('resources', JSON.stringify(resources));
 };
 
 Raja.prototype.emit = function(what) {
@@ -100,7 +95,7 @@ Raja.prototype.on = function(url, query, listener) {
 	this._on(url, plistener);
 	var resources = this.resources;
 	var resource = resources[url];
-	if (!resource) resource = resources[url] = {url: url};
+	if (!resource) resource = resources[url] = {};
 	if (resource.error) return;
 
 	(function(next) {
@@ -128,8 +123,8 @@ Raja.prototype.on = function(url, query, listener) {
 				return next(err);
 			}
 			var mtime = tryDate(xhr.getResponseHeader("Last-Modified"));
-			self.link(url);
 			resource.mtime = mtime;
+			self.update();
 			resource.data = obj;
 			for (var i=0; i < resource.queue.length; i++) {
 				try {
@@ -153,10 +148,14 @@ Raja.prototype.on = function(url, query, listener) {
 };
 
 Raja.prototype.setio = function() {
-	this.io = io(this.base);
+	this.io = io(randomEl(this.iopool));
 	var self = this;
-	this.io.on('reconnect_failed', function(err) {
+	this.io.once('reconnect_failed', function(err) {
 		if (err) self.emit('error', err);
+		self.io.removeAllListeners('message');
+		setTimeout(function() {
+			self.setio();
+		}, 1000);
 	});
 	this.io.emit('join', {
 		room: this.url,
@@ -173,7 +172,7 @@ Raja.prototype.setio = function() {
 		var fresh = msg.mtime > self.mtime;
 		if (fresh) {
 			self.mtime = msg.mtime;
-			self.meta.setAttribute('last-modified', stamp);
+			self.root.setAttribute('last-modified', stamp);
 		}
 		var parents = msg.parents;
 		parents.unshift(msg.url);
@@ -189,6 +188,11 @@ Raja.prototype.setio = function() {
 		}
 	});
 };
+
+function randomEl(arr) {
+	var index = parseInt(Math.random() * arr.length);
+	return arr[index];
+}
 
 function absolute(loc, url) {
 	if (/^https?/i.test(url)) return url;
