@@ -17,7 +17,8 @@ loadScript('/socket.io/socket.io.js', function(err) {
 
 function Raja() {
 	this.delays = [];
-	this.base = document.getElementById('raja-io').content;
+	this.meta = document.getElementById('raja');
+	this.base = this.meta.content;
 }
 
 Raja.prototype.delay = function(url, query, listener) {
@@ -27,14 +28,18 @@ Raja.prototype.delay = function(url, query, listener) {
 
 Raja.prototype.ready = function() {
 	this.url = absolute(document.location, '.');
-	// work around webkit bug https://bugs.webkit.org/show_bug.cgi?id=4363
-	var lastMod = Date.parse(document.lastModified);
+	var lastMod = this.meta.getAttribute('last-modified');
 	var now = new Date();
-	var diff = (new Date(now.toLocaleString())).getTimezoneOffset() - now.getTimezoneOffset();
-	if (!diff) diff = now.getTimezoneOffset() * 60000;
-	else diff = 0;
-	lastMod = lastMod - diff;
+	if (!lastMod) {
+		// work around webkit bug https://bugs.webkit.org/show_bug.cgi?id=4363
+		lastMod = Date.parse(document.lastModified);
+		var diff = (new Date(now.toLocaleString())).getTimezoneOffset() - now.getTimezoneOffset();
+		if (!diff) diff = now.getTimezoneOffset() * 60000;
+		else diff = 0;
+		lastMod = lastMod - diff;
+	}
 	this.mtime = isNaN(lastMod) ? now : new Date(lastMod);
+	this.meta.setAttribute('last-modified', this.mtime.getTime());
 	this.resources = {};
 	var links = document.head.querySelectorAll('link[rel="resource"]');
 	for (var i=0; i < links.length; i++) {
@@ -162,11 +167,13 @@ Raja.prototype.setio = function() {
 		if (!msg.url) return;
 		var data = msg.data;
 		if (data) delete msg.data;
-		var mtime = tryDate(msg.mtime);
+		var stamp = msg.mtime;
+		var mtime = tryDate(stamp);
 		if (mtime) msg.mtime = mtime;
 		var fresh = msg.mtime > self.mtime;
 		if (fresh) {
 			self.mtime = msg.mtime;
+			self.meta.setAttribute('last-modified', stamp);
 		}
 		var parents = msg.parents;
 		parents.unshift(msg.url);
