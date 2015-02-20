@@ -29,12 +29,13 @@ Raja.prototype.ready = function() {
 			self.ready();
 		});
 		this.namespace = this.root.getAttribute('namespace') || '';
+		this.room = this.root.getAttribute('room');
+		if (!this.room) throw new Error("Raja cannot connect without a room url");
 	}
 	if (!window.io) {
 		return;
 	}
 
-	this.url = absolute(document.location, '.');
 	var lastMod = this.root.getAttribute('last-modified');
 	var now = new Date();
 	if (!lastMod) {
@@ -95,7 +96,7 @@ Raja.prototype.on = function(url, query, listener) {
 			self.emit('error', e);
 		}
 	};
-	url = absolute(document.location, url);
+	url = absolute(this.room, url);
 	url = urlQuery(url, query);
 	this._on(url, plistener);
 	var resources = this.resources;
@@ -163,7 +164,7 @@ Raja.prototype.setio = function() {
 		}, 1000);
 	});
 	this.io.emit('join', {
-		room: this.url,
+		room: this.room,
 		mtime: this.mtime.getTime()
 	});
 
@@ -201,6 +202,16 @@ function randomEl(arr) {
 
 function absolute(loc, url) {
 	if (/^https?/i.test(url)) return url;
+	if (typeof loc == "string") {
+		if (!this.a) this.a = document.createElement('a');
+		this.a.href = loc;
+		loc = {
+			href: this.a.href,
+			pathname: this.a.pathname,
+			protocol: this.a.protocol,
+			host: this.a.host
+		};
+	}
 	var path = loc.pathname;
 	if (url.indexOf('..') == 0) {
 		path = path.split('/');
@@ -276,7 +287,7 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 		}
 		// consume parameters from query object
 		url = urlParams(url, query);
-		url = absolute(document.location, url);
+		url = absolute(this.room, url);
 		if (/^(HEAD|GET|COPY)$/i.test(method)) {
 			query = query || body || {};
 		} else {
