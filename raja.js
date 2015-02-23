@@ -154,7 +154,9 @@ Raja.prototype.on = function(url, query, listener) {
 };
 
 Raja.prototype.setio = function() {
-	this.io = io(randomEl(this.pool) + '/' + this.namespace);
+	var iohost = randomEl(this.pool);
+	if (iohost.substring(0, 2) == '//') iohost = document.location.protocol + iohost;
+	this.io = io(iohost + '/' + this.namespace);
 	var self = this;
 	this.io.once('reconnect_failed', function(err) {
 		if (err) self.emit('error', err);
