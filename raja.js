@@ -45,11 +45,9 @@ Raja.prototype.ready = function() {
 		if (!diff) diff = now.getTimezoneOffset() * 60000;
 		else diff = 0;
 		lastMod = lastMod - diff;
-	} else {
-		lastMod = parseInt(lastMod);
 	}
 
-	this.mtime = isNaN(lastMod) ? now : new Date(lastMod);
+	this.mtime = tryDate(lastMod) || now;
 	this.root.setAttribute('last-modified', this.mtime.getTime());
 	this.resources = JSON.parse(this.root.getAttribute('resources')) || {};
 	for (var url in this.resources) {
@@ -365,6 +363,10 @@ function tryJSON(txt) {
 
 function tryDate(txt) {
 	if (!txt) return;
+	if (typeof txt == "string") {
+		var num = parseInt(txt);
+		if (!isNaN(num) && num.toString().length == txt.length) txt = num;
+	}
 	var date = new Date(txt);
 	var time = date.getTime();
 	if (isNaN(time)) return;
