@@ -108,7 +108,7 @@ Raja.prototype.on = function(url, query, listener) {
 		var reqs = resource.requests;
 		if (resource.data !== undefined) {
 			listener(resource.data, {
-				method:"get",
+				method: "get",
 				url: url,
 				mtime: resource.mtime
 			});
@@ -135,7 +135,7 @@ Raja.prototype.on = function(url, query, listener) {
 			for (var i=0; i < resource.queue.length; i++) {
 				try {
 					resource.queue[i](obj, {
-						method:"get",
+						method: "get",
 						url: url,
 						query: query,
 						mtime: mtime

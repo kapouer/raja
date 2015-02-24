@@ -26,12 +26,12 @@
     "url": "https://github.com/kapouer/raja/issues"
   },
   "dependencies": {
+    "adaptative-replacement-cache": "^0.1.0",
     "async-queue": "^0.1.0",
     "cache-on-demand": "^0.2.0",
     "chokidar": "^0.12.6",
     "debounce": "^1.0.0",
     "express-buffer-response": "^1.0.3",
-    "lfu-cache": "^0.1.0",
     "orm": "^2.1.20",
     "path-to-regexp": "^1.0.3",
     "queue-async": "^1.0.7",
