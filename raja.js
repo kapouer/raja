@@ -45,7 +45,10 @@ Raja.prototype.ready = function() {
 		if (!diff) diff = now.getTimezoneOffset() * 60000;
 		else diff = 0;
 		lastMod = lastMod - diff;
+	} else {
+		lastMod = parseInt(lastMod);
 	}
+
 	this.mtime = isNaN(lastMod) ? now : new Date(lastMod);
 	this.root.setAttribute('last-modified', this.mtime.getTime());
 	this.resources = JSON.parse(this.root.getAttribute('resources')) || {};
