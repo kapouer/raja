@@ -68,6 +68,10 @@ Raja.prototype.update = function() {
 
 Raja.prototype.emit = function(what) {
 	var args = Array.prototype.slice.call(arguments, 0);
+	var url = this.absolute(this.room, what);
+	if (what != 'error') {
+		args[0] = url;
+	}
 	try {
 		this._emit.apply(this, args);
 	} catch(e) {
