@@ -1,6 +1,6 @@
 {
   "name": "raja",
-  "version": "0.18.2",
+  "version": "0.18.3",
   "description": "distributed cache tracking resources, pages, assets, builds and their dependencies",
   "main": "lib/core.js",
   "scripts": {
@@ -42,7 +42,7 @@
     "type-is": "^1.6.0"
   },
   "peerDependencies": {
-    "express-dom": "^2.11.0"
+    "express-dom": "^2.12.0"
   },
   "devDependencies": {
     "express": "^4.12.0",
