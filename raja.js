@@ -163,18 +163,20 @@ Raja.prototype.setio = function() {
 	if (iohost.substring(0, 2) == '//') iohost = document.location.protocol + iohost;
 	this.io = io(iohost + '/' + this.namespace);
 	var self = this;
-	this.io.once('reconnect_failed', function(err) {
+	function derror(err) {
 		if (err) self.emit('error', err);
-		self.io.removeAllListeners('message');
 		setTimeout(function() {
-			self.setio();
+			self.io.connect();
 		}, 1000);
+	}
+	this.io.on('disconnect', derror);
+	this.io.on('connect_error', derror);
+	this.io.on('connect', function() {
+		self.io.emit('join', {
+			room: self.room,
+			mtime: self.mtime.getTime()
+		});
 	});
-	this.io.emit('join', {
-		room: this.room,
-		mtime: this.mtime.getTime()
-	});
-
 	this.io.on('message', function(msg) {
 		if (!msg.url) return;
 		var data = msg.data;
