@@ -223,7 +223,8 @@ function randomEl(arr) {
 
 function absolute(loc, url) {
 	if (/^https?/i.test(url)) return url;
-	if (typeof loc == "string") {
+	if (!loc) loc = document.location;
+	else if (typeof loc == "string") {
 		if (!this.a) this.a = document.createElement('a');
 		this.a.href = loc;
 		loc = {
