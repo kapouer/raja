@@ -165,8 +165,8 @@ Raja.prototype.setio = function() {
 	var self = this;
 	var timeout;
 	function derror(err) {
-		if (err) self.emit('error', err);
 		if (timeout) return;
+		if (err) self.emit('error', err);
 		timeout = setTimeout(function() {
 			timeout = null;
 			self.io.connect();
