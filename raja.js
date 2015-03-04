@@ -3,8 +3,14 @@
  */
 (function() {
 
+var INITIAL = 0;
+var CONFIG = 1;
+var LOADING = 2;
+var LOADED = 3;
+
 function Raja() {
 	this.delays = [];
+	this.state = INITIAL;
 	this.ready();
 }
 
@@ -14,23 +20,36 @@ Raja.prototype.delay = function(url, query, listener) {
 };
 
 Raja.prototype.ready = function() {
-	this.root = document.getElementById('raja');
-	if (!this.root) return;
 	var self = this;
-	if (!this.pool) {
+	if (this.state == INITIAL) {
+		this.root = document.getElementById('raja');
+		if (!this.root) return;
+		this.state = CONFIG;
 		this.pool = (this.root.getAttribute('client') || '').split(' ');
+		this.namespace = this.root.getAttribute('namespace') || '';
+		this.room = this.root.getAttribute('room');
+		if (!this.room) throw new Error("Raja cannot connect without a room url");
+	}
+	if (this.state == CONFIG) {
+		this.state = LOADING;
 		loadScript(randomEl(this.pool) + '/socket.io/socket.io.js', function(err) {
-			if (err) throw err;
-			var proto = io.Manager.prototype;
+			if (err || !window.io) {
+				if (self.loadTimeout) return;
+				self.state = CONFIG;
+				self.loadTimeout = setTimeout(function() {
+					self.loadTimeout = null;
+					self.ready();
+				}, 1000);
+				return;
+			}
+			self.state = LOADED;
+			var proto = window.io.Manager.prototype;
 			self._on = proto.on;
 			self._emit = proto.emit;
 			self.off = proto.off;
 			self.listeners = proto.listeners;
 			self.ready();
 		});
-		this.namespace = this.root.getAttribute('namespace') || '';
-		this.room = this.root.getAttribute('room');
-		if (!this.room) throw new Error("Raja cannot connect without a room url");
 	}
 	if (!window.io) {
 		return;
@@ -161,19 +180,9 @@ Raja.prototype.on = function(url, query, listener) {
 Raja.prototype.setio = function() {
 	var iohost = randomEl(this.pool);
 	if (iohost.substring(0, 2) == '//') iohost = document.location.protocol + iohost;
-	this.io = io(iohost + '/' + this.namespace);
+	this.io = window.io(iohost + '/' + this.namespace);
 	var self = this;
-	var timeout;
-	function derror(err) {
-		if (timeout) return;
-		if (err) self.emit('error', err);
-		timeout = setTimeout(function() {
-			timeout = null;
-			self.io.connect();
-		}, 1000);
-	}
-	this.io.on('disconnect', derror);
-	this.io.on('connect_error', derror);
+
 	this.io.on('connect', function() {
 		self.io.emit('join', {
 			room: self.room,
