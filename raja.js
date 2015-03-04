@@ -163,9 +163,12 @@ Raja.prototype.setio = function() {
 	if (iohost.substring(0, 2) == '//') iohost = document.location.protocol + iohost;
 	this.io = io(iohost + '/' + this.namespace);
 	var self = this;
+	var timeout;
 	function derror(err) {
 		if (err) self.emit('error', err);
-		setTimeout(function() {
+		if (timeout) return;
+		timeout = setTimeout(function() {
+			timeout = null;
 			self.io.connect();
 		}, 1000);
 	}
