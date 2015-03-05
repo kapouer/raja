@@ -235,21 +235,28 @@ function absolute(loc, url) {
 		};
 	}
 	var path = loc.pathname;
-	if (url.indexOf('..') == 0) {
-		path = path.split('/');
-		path.pop();
-		url = path.join('/') + url.substring(2);
-	} else if (url == '.') {
-		 return loc.href;
-	} else if (url.indexOf('.') == 0) {
-		url = path + url.substring(1);
-	} else if (url.indexOf('/') != 0) {
-		var base = path.split('/');
-		base.pop();
-		base = base.join('/');
-		url = base + '/' + url;
+	if (url && url.substring(0, 1) == '/') {
+		path = url;
+	} else {
+		var adds = url.split('/');
+		var comps = path.split('/');
+		var prev = comps.pop();
+		while (adds.length) {
+			var toAdd = adds.shift();
+			last = comps.pop();
+			if (toAdd == '..') {
+				// do not add last back
+			} else if (toAdd == '.') {
+				comps.push(last);
+				if (prev != '') comps.push(prev);
+			} else {
+				comps.push(last);
+				comps.push(toAdd);
+			}
+		}
+		path = comps.join('/');
 	}
-	url = loc.protocol + '//' + loc.host + url;
+	url = loc.protocol + '//' + loc.host + path;
 	return url;
 }
 Raja.prototype.absolute = absolute;
