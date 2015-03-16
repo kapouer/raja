@@ -1,6 +1,6 @@
 {
   "name": "raja",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "description": "distributed cache tracking resources, pages, assets, builds and their dependencies",
   "main": "lib/core.js",
   "scripts": {
@@ -30,8 +30,11 @@
     "buffer-equal": "0.0.1",
     "cache-on-demand": "^0.2.0",
     "chokidar": "^0.12.6",
+    "cookie": "^0.1.2",
+    "cookie-signature": "^1.0.6",
     "debounce": "^1.0.0",
     "express-buffer-response": "^1.1.0",
+    "js-combinatorics": "^0.4.0",
     "orm": "^2.1.20",
     "path-to-regexp": "^1.0.3",
     "queue-async": "^1.0.7",
