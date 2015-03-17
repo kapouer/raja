@@ -80,14 +80,32 @@ Raja.prototype.ready = function() {
 };
 
 Raja.prototype.update = function() {
-	var resources = {};
-	for (var url in this.resources) resources[url] = this.resources[url].mtime;
-	this.root.setAttribute('resources', JSON.stringify(resources));
+	var mtimes = {};
+	var grants = {};
+	for (var url in this.resources) {
+		var resource = this.resources[url];
+		mtimes[url] = resource.mtime;
+		var grant = resource.grant || [];
+		for (var i=0; i < grant.length; i++) {
+			grants[grant[i]] = true;
+		}
+	}
+	this.root.setAttribute('resources', JSON.stringify(mtimes));
+	var oldroom = this.room;
+	var newroom = urlToKey(keyToUrl(oldroom), grants);
+	if (oldroom != newroom) {
+		this.root.setAttribute('room', newroom);
+		this.room = newroom;
+		if (this.io) {
+			this.io.emit('leave', { room: oldroom	});
+			this.join();
+		}
+	}
 };
 
 Raja.prototype.emit = function(what) {
 	var args = Array.prototype.slice.call(arguments, 0);
-	var url = this.absolute(this.room, what);
+	var url = this.absolute(keyToUrl(this.room), what);
 	if (what != 'error') {
 		args[0] = url;
 	}
@@ -110,7 +128,6 @@ Raja.prototype.on = function(url, query, listener) {
 	if (!this.resources) {
 		return this.delay(url, query, listener);
 	}
-	if (!this.io) this.setio();
 	var self = this;
 	if (url == "error") return this._on(url, listener);
 	var plistener = function() {
@@ -120,7 +137,7 @@ Raja.prototype.on = function(url, query, listener) {
 			self.emit('error', e);
 		}
 	};
-	url = absolute(this.room, url);
+	url = absolute(keyToUrl(this.room), url);
 	url = urlQuery(url, query);
 	this._on(url, plistener);
 	var resources = this.resources;
@@ -153,6 +170,8 @@ Raja.prototype.on = function(url, query, listener) {
 				return next(err);
 			}
 			var mtime = tryDate(xhr.getResponseHeader("Last-Modified"));
+			var grant = xhr.getResponseHeader("X-Grant");
+			resource.grant = grant ? grant.split(',') : [];
 			resource.mtime = mtime;
 			self.update();
 			resource.data = obj;
@@ -173,8 +192,25 @@ Raja.prototype.on = function(url, query, listener) {
 		});
 	})(function(err) {
 		if (err) self.emit('error', err);
+		if (!self.io) {
+			var alldone = true;
+			for (var url in resources) {
+				if (!resources[url].mtime) {
+					alldone = false;
+					break;
+				}
+			}
+			if (alldone) self.setio();
+		}
 	});
 	return this;
+};
+
+Raja.prototype.join = function() {
+	this.io.emit('join', {
+		room: this.room,
+		mtime: this.mtime.getTime()
+	});
 };
 
 Raja.prototype.setio = function() {
@@ -184,10 +220,7 @@ Raja.prototype.setio = function() {
 	var self = this;
 
 	this.io.on('connect', function() {
-		self.io.emit('join', {
-			room: self.room,
-			mtime: self.mtime.getTime()
-		});
+		self.join();
 	});
 	this.io.on('message', function(msg) {
 		if (!msg.url) return;
@@ -203,13 +236,14 @@ Raja.prototype.setio = function() {
 		}
 		var parents = msg.parents;
 		parents.unshift(msg.url);
+		var selfUrl = keyToUrl(self.room);
 		for (var i=0; i < parents.length; i++) {
 			var url = keyToUrl(parents[i]);
 			var resource = self.resources[url];
 			if (resource) {
 				if (!resource.mtime || msg.mtime > resource.mtime) resource.mtime = msg.mtime;
 				self.emit(url, data, msg);
-			} else if (fresh && url != self.url) {
+			} else if (fresh && url != selfUrl) {
 				// some dependency that isn't a resource - a static file ? - has changed
 			}
 		}
@@ -316,7 +350,7 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 		}
 		// consume parameters from query object
 		url = urlParams(url, query);
-		url = absolute(this.room, url);
+		url = absolute(keyToUrl(this.room), url);
 		if (/^(HEAD|GET|COPY)$/i.test(method)) {
 			query = query || body || {};
 		} else {
@@ -409,6 +443,15 @@ function keyToUrl(key) {
 		if (find[2]) return find[2];
 	}
 	return key;
+}
+
+function urlToKey(url, grants) {
+	var list = [];
+	for (var grant in grants) {
+		list.push(grant);
+	}
+	if (!list.length) return url;
+	else return "right=" + encodeURIComponent(list.join(',')) + " " + url;
 }
 
 window.raja = new Raja();
