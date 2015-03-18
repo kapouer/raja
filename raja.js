@@ -330,16 +330,23 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 		url = urlQuery(url, query);
 		var xhr = new XMLHttpRequest();
 		xhr.open(method, url, true);
-		xhr.setRequestHeader('Accept', 'application/json');
+		xhr.setRequestHeader('Accept', [
+			'application/json; q=1.0',
+			'text/javascript; q=1.0',
+			'application/xml; q=0.9',
+			'text/xml; q=0.9',
+			'text/plain; q=0.8',
+			'text/html; q=0.7'
+		].join(', '));
 		if (body) xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
 		xhr.onreadystatechange = function (e) {
 			if (xhr.readyState == 4) {
 				var code = xhr.status;
-				var response = tryJSON(xhr.responseText);
+				var response = xhr.responseXML || tryJSON(xhr.responseText);
 				if (code >= 200 && code < 400) {
 					cb(null, response);
 				} else {
-					var err = new Error(response);
+					var err = new Error(xhr.responseText);
 					err.code = code;
 					cb(err);
 				}
