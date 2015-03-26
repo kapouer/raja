@@ -148,7 +148,7 @@ Raja.prototype.on = function(url, query, listener) {
 	(function(next) {
 		var reqs = resource.requests;
 		if (resource.data !== undefined) {
-			listener(resource.data, {
+			plistener(resource.data, {
 				method: "get",
 				url: url,
 				mtime: resource.mtime
@@ -159,11 +159,11 @@ Raja.prototype.on = function(url, query, listener) {
 			return next();
 		} else if (resource.queue) {
 			// resource is currently loading
-			resource.queue.push(listener);
+			resource.queue.push(plistener);
 			return;
 		}
 		// resource has not been loaded, is not loading. Proceed
-		resource.queue = [listener];
+		resource.queue = [plistener];
 		var xhr = Raja.prototype.GET(url, function(err, obj) {
 			if (err) {
 				resource.error = err;
