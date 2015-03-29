@@ -28,7 +28,7 @@
   "dependencies": {
     "adaptative-replacement-cache": "^0.1.0",
     "buffer-equal": "0.0.1",
-    "cache-on-demand": "^0.2.0",
+    "cache-debounce": "^0.2.0",
     "chokidar": "^0.12.6",
     "cookie": "^0.1.2",
     "cookie-signature": "^1.0.6",
