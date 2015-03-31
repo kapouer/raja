@@ -184,6 +184,37 @@ Combined with preload, maxage can ensure a resource is always up-to-date,
 and has the effect of always immediately sending the cached version without delay.
 
 
+authentication - authorization
+==============================
+
+Authentication is done as usual (some rights are given to a session and those
+rights are checked whenever access must be granted), with additional information
+sent through specific HTTP headers:
+Rights that are needed to access a given url must be listed in
+the X-Right HTTP request header.
+
+It implicitely sets X-Grant: <rights> and Vary: X-Grant response headers,
+which are used to cache resource properly.
+
+For now it doesn't set them explicitely - that might happen in the future;
+for instance it could be used to make sure actual grants for resources consumed
+by a page match requested rights.
+
+
+content negotiation
+===================
+
+If a resource vary on Content-Type, it is expected to always provide an
+Accept request header - as there is no way to tell which variant is the right
+one without it.
+For now, only the first accepted variant is actually searched, so if request
+accepts json, xml and the cache has only one resource for the xml variant,
+it won't be found.
+
+Authorization negotiation works on the same model - only 'exact' matching is
+currently supported in both types of negotiation.
+
+
 raja client
 ===========
 

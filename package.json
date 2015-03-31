@@ -34,7 +34,6 @@
     "cookie-signature": "^1.0.6",
     "debounce": "^1.0.0",
     "express-buffer-response": "^1.1.0",
-    "js-combinatorics": "^0.4.0",
     "on-headers": "^1.0.0",
     "orm": "^2.1.20",
     "path-to-regexp": "^1.0.3",
