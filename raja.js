@@ -105,7 +105,7 @@ Raja.prototype.update = function() {
 
 Raja.prototype.emit = function(what) {
 	var args = Array.prototype.slice.call(arguments, 0);
-	var url = this.absolute(keyToUrl(this.room), what);
+	var url = what != null && this.absolute(keyToUrl(this.room), what);
 	if (what != 'error') {
 		args[0] = url;
 	}
@@ -335,6 +335,7 @@ Raja.prototype.urlQuery = urlQuery;
 
 for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 	Raja.prototype[method] = (function(method) { return function(url, query, body, cb) {
+		if (!url) throw new Error("Missing url in raja." + method);
 		if (!cb) {
 			if (typeof body == "function") {
 				cb = body;
