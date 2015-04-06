@@ -30,30 +30,6 @@ Raja.prototype.ready = function() {
 		this.room = this.root.getAttribute('room');
 		if (!this.room) throw new Error("Raja cannot connect without a room url");
 	}
-	if (this.state == CONFIG) {
-		this.state = LOADING;
-		loadScript(randomEl(this.pool) + '/socket.io/socket.io.js', function(err) {
-			if (err || !window.io) {
-				if (self.loadTimeout) return;
-				self.state = CONFIG;
-				self.loadTimeout = setTimeout(function() {
-					self.loadTimeout = null;
-					self.ready();
-				}, 1000);
-				return;
-			}
-			self.state = LOADED;
-			var proto = window.io.Manager.prototype;
-			self._on = proto.on;
-			self._emit = proto.emit;
-			self.off = proto.off;
-			self.listeners = proto.listeners;
-			self.ready();
-		});
-	}
-	if (!window.io) {
-		return;
-	}
 
 	var lastMod = this.root.getAttribute('last-modified');
 	var now = new Date();
@@ -72,11 +48,34 @@ Raja.prototype.ready = function() {
 	for (var url in this.resources) {
 		this.resources[url] = {mtime: tryDate(this.resources[url])};
 	}
-	var list = this.delays;
-	delete this.delays;
-	for (var i=0; i < list.length; i++) {
-		this.on.apply(this, list[i]);
-	}
+};
+
+Raja.prototype.load = function() {
+	if (this.state != CONFIG) return;
+	this.state = LOADING;
+	var self = this;
+	loadScript(randomEl(this.pool) + '/socket.io/socket.io.js', function(err) {
+		if (err || !window.io) {
+			if (self.loadTimeout) return;
+			self.state = CONFIG;
+			self.loadTimeout = setTimeout(function() {
+				self.loadTimeout = null;
+				self.ready();
+			}, 1000);
+			return;
+		}
+		self.state = LOADED;
+		var proto = window.io.Manager.prototype;
+		self._on = proto.on;
+		self._emit = proto.emit;
+		self.off = proto.off;
+		self.listeners = proto.listeners;
+		var list = self.delays;
+		delete self.delays;
+		for (var i=0; i < list.length; i++) {
+			self.on.apply(self, list[i]);
+		}
+	});
 };
 
 Raja.prototype.update = function() {
@@ -125,7 +124,8 @@ Raja.prototype.on = function(url, query, listener) {
 		listener = query;
 		query = null;
 	}
-	if (!this.resources) {
+	if (!this.resources || !window.io) {
+		if (!window.io) this.load();
 		return this.delay(url, query, listener);
 	}
 	var self = this;
@@ -200,7 +200,11 @@ Raja.prototype.on = function(url, query, listener) {
 					break;
 				}
 			}
-			if (alldone) self.setio();
+			if (alldone) {
+				setTimeout(function() {
+					self.connect();
+				}, 1);
+			}
 		}
 	});
 	return this;
@@ -213,7 +217,7 @@ Raja.prototype.join = function() {
 	});
 };
 
-Raja.prototype.setio = function() {
+Raja.prototype.connect = function() {
 	var iohost = randomEl(this.pool);
 	if (iohost.substring(0, 2) == '//') iohost = document.location.protocol + iohost;
 	this.io = window.io(iohost + '/' + this.namespace);
