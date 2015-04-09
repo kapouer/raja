@@ -29,7 +29,7 @@
     "adaptative-replacement-cache": "^0.1.0",
     "buffer-equal": "0.0.1",
     "cache-debounce": "^0.2.0",
-    "chokidar": "^0.12.6",
+    "chokidar": "^1.0.1",
     "cookie": "^0.1.2",
     "cookie-signature": "^1.0.6",
     "debounce": "^1.0.0",
