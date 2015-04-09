@@ -225,13 +225,13 @@ function absolute(loc, url) {
 	if (/^https?/i.test(url)) return url;
 	if (!loc) loc = document.location;
 	else if (typeof loc == "string") {
-		if (!this.a) this.a = document.createElement('a');
-		this.a.href = loc;
+		var ta = document.createElement('a');
+		ta.href = loc;
 		loc = {
-			href: this.a.href,
-			pathname: this.a.pathname,
-			protocol: this.a.protocol,
-			host: this.a.host
+			href: ta.href,
+			pathname: ta.pathname,
+			protocol: ta.protocol,
+			host: ta.host
 		};
 	}
 	var path = loc.pathname;
