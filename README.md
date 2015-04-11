@@ -44,17 +44,26 @@ app.set('statics', process.cwd() + '/public');
 
 // start raja store, socket.io server, socket.io client
 var raja = require('raja')({
+	// a db connector for orm
 	store: "sqlite://raja.db",
+	// reset previous raja db tables
+	reset: !!process.env.RAJA_RESET,
+	// the memory cache size
+	cacheSize: 10000,
 	// the application namespace, used in socket.io or http headers
 	namespace: "test",
 	// where socket.io clients must connect (namespace will be appended)
 	client: "http://localhost:7000",
+	// append token to query string when connecting a remote socket.io server
+	token: "123456",
 	// spawns a socket.io server
 	server: server,
 	// install optional statics proxy - needed when using minify plugin
 	statics: app.get('statics'),
 	// install optional express-dom proxy
-	dom: dom
+	dom: dom,
+	// set to disable to stop caching entirely
+	disable: false
 }, function(err) {
 	if (err) {
 		console.error(err);
