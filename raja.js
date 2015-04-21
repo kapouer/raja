@@ -302,7 +302,11 @@ function reargs(url, opts) {
 	}
 	url = urlParams(url, query);
 	url = absolute(keyToUrl(this.room), url);
-	url = urlQuery(url, query);
+	var str = this.query.stringify(query);
+	if (str) {
+		url += url.indexOf('?') > 0 ? '&' : '?';
+		url += str;
+	}
 	opts.url = url;
 	return opts;
 }
@@ -366,29 +370,39 @@ function urlParams(url, params) {
 }
 Raja.prototype.urlParams = urlParams;
 
-function urlQuery(url, query) {
-	if (!query) return url;
-	var comps = [];
-	for (var k in query) comps.push({key: k, val: query[k]});
-	comps.sort(function(a, b) {
-		if (a.key < b.key) return 1;
-		else if (a.key > b.key) return -1;
-		else return 0;
-	});
-	var str, list = [];
-	for (var i=0; i < comps.length; i++) {
-		str = encodeURIComponent(comps[i].key);
-		if (comps[i].val != null) str += '=' + encodeURIComponent(comps[i].val);
-		list.push(str);
+Raja.prototype.query = {
+	stringify: function(query) {
+		var comps = [];
+		for (var k in query) comps.push({key: k, val: query[k]});
+		comps.sort(function(a, b) {
+			if (a.key < b.key) return 1;
+			else if (a.key > b.key) return -1;
+			else return 0;
+		});
+		var str, list = [];
+		for (var i=0; i < comps.length; i++) {
+			str = encodeURIComponent(comps[i].key);
+			if (comps[i].val != null) str += '=' + encodeURIComponent(comps[i].val);
+			list.push(str);
+		}
+		if (list.length) return list.join('&');
+		else return '';
+	},
+	parse: function(str) {
+		if (str == undefined) {
+			str = document.location.search;
+			if (str && str[0] == "?") str = str.substring(1);
+		}
+		var list = str.split('&');
+		var obj = {}, pair;
+		for (var i = 0; i < list.length; i++) {
+			pair = list[i].split('=');
+			if (!pair.length) continue;
+			obj[decodeURIComponent(pair[0])] = pair[1] !== undefined ? decodeURIComponent(pair[1]) : null;
+		}
+		return obj;
 	}
-	if (list.length) {
-		if (url.indexOf('?') > 0) url += '&';
-		else url += '?';
-		url += list.join('&');
-	}
-	return url;
-}
-Raja.prototype.urlQuery = urlQuery;
+};
 
 for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 	Raja.prototype[method] = (function(method) { return function(url, opts, body, cb) {
@@ -511,10 +525,6 @@ function tryDate(txt) {
 	var time = date.getTime();
 	if (isNaN(time)) return;
 	else return date;
-}
-
-function $(str) {
-	return document.querySelector(str);
 }
 
 function keyToUrl(key) {
