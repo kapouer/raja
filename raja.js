@@ -14,8 +14,8 @@ function Raja() {
 	this.ready();
 }
 
-Raja.prototype.delay = function(url, query, listener) {
-	this.delays.push([url, query, listener]);
+Raja.prototype.delay = function(method, url, query, listener) {
+	this.delays.push([method, url, query, listener]);
 	return this;
 };
 
@@ -44,13 +44,16 @@ Raja.prototype.ready = function() {
 
 	this.mtime = tryDate(lastMod) || now;
 	this.root.setAttribute('last-modified', this.mtime.getTime());
-	this.resources = JSON.parse(this.root.getAttribute('resources')) || {};
+	var att = this.root.getAttribute('data-resources');
+	this.resources = att && JSON.parse(att) || {};
 	for (var url in this.resources) {
-		this.resources[url] = {mtime: tryDate(this.resources[url])};
+		var resource = this.resources[url];
+		resource.seen = true;
+		resource.mtime = tryDate(resource.mtime);
 	}
 };
 
-Raja.prototype.load = function() {
+Raja.prototype.init = function() {
 	if (this.state != CONFIG) return;
 	this.state = LOADING;
 	var self = this;
@@ -73,23 +76,28 @@ Raja.prototype.load = function() {
 		var list = self.delays;
 		delete self.delays;
 		for (var i=0; i < list.length; i++) {
-			self.on.apply(self, list[i]);
+			self[list[i].shift()].apply(self, list[i]);
 		}
 	});
 };
 
 Raja.prototype.update = function() {
-	var mtimes = {};
 	var grants = {};
+	var copies = {};
+
 	for (var url in this.resources) {
 		var resource = this.resources[url];
-		mtimes[url] = resource.mtime;
-		var grant = resource.grant || [];
+		var copy = {};
+		if (resource.mtime) copy.mtime = resource.mtime;
+		if (resource.cache && resource.data != undefined) copy.data = resource.data;
+		copies[url] = copy;
+		var grant = this.resources[url].grant || [];
 		for (var i=0; i < grant.length; i++) {
 			grants[grant[i]] = true;
 		}
 	}
-	this.root.setAttribute('resources', JSON.stringify(mtimes));
+	this.root.setAttribute('data-resources', JSON.stringify(copies));
+
 	var oldroom = this.room;
 	var newroom = urlToKey(keyToUrl(oldroom), grants);
 	if (oldroom != newroom) {
@@ -119,17 +127,18 @@ Raja.prototype.emit = function(what) {
 	}
 };
 
-Raja.prototype.on = function(url, query, listener) {
-	if (!listener && typeof query == "function") {
-		listener = query;
-		query = null;
-	}
-	if (!this.resources || !window.io) {
-		if (!window.io) this.load();
-		return this.delay(url, query, listener);
-	}
+Raja.prototype.on = function(url, opts, listener) {
 	var self = this;
+	if (!listener && typeof opts == "function") {
+		listener = opts;
+		opts = null;
+	}
 	if (url == "error") return this._on(url, listener);
+
+	if (!this.resources || !window.io) {
+		if (!window.io) this.init();
+		return this.delay('on', url, opts, listener);
+	}
 	var plistener = function() {
 		try {
 			listener.apply(null, Array.prototype.slice.call(arguments));
@@ -137,77 +146,84 @@ Raja.prototype.on = function(url, query, listener) {
 			self.emit('error', e);
 		}
 	};
-	url = absolute(keyToUrl(this.room), url);
-	url = urlQuery(url, query);
-	this._on(url, plistener);
-	var resources = this.resources;
-	var resource = resources[url];
-	if (!resource) resource = resources[url] = {};
-	if (resource.error) return;
+	opts = reargs.call(this, url, opts);
 
-	(function(next) {
-		var reqs = resource.requests;
-		if (resource.data !== undefined) {
-			plistener(resource.data, {
-				method: "get",
-				url: url,
-				mtime: resource.mtime
-			});
-			return next();
-		} else if (resource.mtime !== undefined) {
-			// resource merged, just join it
-			return next();
-		} else if (resource.queue) {
-			// resource is currently loading
-			resource.queue.push(plistener);
-			return;
+	this._on(opts.url, plistener);
+
+	this.once(opts.url, opts, function(err, data, meta) {
+		if (err) return self.emit('error', err);
+		plistener(data, meta);
+		if (self.io) return;
+		var alldone = true;
+		for (var url in self.resources) {
+			if (!self.resources[url].mtime) {
+				alldone = false;
+				break;
+			}
 		}
-		// resource has not been loaded, is not loading. Proceed
-		resource.queue = [plistener];
-		var xhr = Raja.prototype.GET(url, function(err, obj) {
-			if (err) {
-				resource.error = err;
-				return next(err);
-			}
-			var mtime = tryDate(xhr.getResponseHeader("Last-Modified"));
-			var grant = xhr.getResponseHeader("X-Grant");
-			resource.grant = grant ? grant.split(',') : [];
-			resource.mtime = mtime;
-			self.update();
-			resource.data = obj;
-			for (var i=0; i < resource.queue.length; i++) {
-				try {
-					resource.queue[i](obj, {
-						method: "get",
-						url: url,
-						query: query,
-						mtime: mtime
-					});
-				} catch(e) {
-					console.error(e);
-				}
-			}
-			delete resource.queue;
-			next();
-		});
-	})(function(err) {
-		if (err) self.emit('error', err);
-		if (!self.io) {
-			var alldone = true;
-			for (var url in resources) {
-				if (!resources[url].mtime) {
-					alldone = false;
-					break;
-				}
-			}
-			if (alldone) {
-				setTimeout(function() {
-					self.connect();
-				}, 1);
-			}
+		if (alldone) {
+			setTimeout(function() {
+				self.connect();
+			}, 1);
 		}
 	});
 	return this;
+};
+
+Raja.prototype.many = function(url, opts, cb) {
+	opts = reargs.call(this, url, opts);
+	opts.cache = true;
+	this.load(opts.url, opts, cb);
+};
+
+Raja.prototype.once = function(url, opts, cb) {
+	opts = reargs.call(this, url, opts);
+	opts.once = true;
+	this.load(opts.url, opts, cb);
+};
+
+Raja.prototype.load = function(url, opts, cb) {
+	if (!cb && typeof opts == "function") {
+		cb = opts;
+		opts = null;
+	}
+	opts = reargs.call(this, url, opts);
+	var resources = this.resources;
+	var resource = resources[opts.url];
+	if (!resource) resource = resources[opts.url] = {url: opts.url};
+	else if (opts.once) return;
+	if (resource.error) return cb(resource.error);
+	if (resource.data !== undefined) return cb(null, resource.data);
+	if (resource.callbacks) {
+		// resource is currently loading
+		resource.callbacks.push(cb);
+		return {};
+	}
+	resource.callbacks = [cb];
+	var self = this;
+	var xhr = this.GET(opts.url, opts, function(err, obj) {
+		if (err) {
+			resource.error = err;
+			return done(err);
+		}
+		var mtime = tryDate(xhr.getResponseHeader("Last-Modified"));
+		var grant = xhr.getResponseHeader("X-Grant");
+		resource.grant = grant ? grant.split(',') : [];
+		resource.mtime = mtime;
+		resource.data = obj;
+		self.update();
+		done(null, obj);
+	});
+	function done(err, data) {
+		for (var i=0; i < resource.callbacks.length; i++) {
+			try {
+				resource.callbacks[i](err, data, {mtime: resource.mtime, url: opts.url, method: 'get'});
+			} catch(e) {
+				console.error(e);
+			}
+		}
+		delete resource.callbacks;
+	}
 };
 
 Raja.prototype.join = function() {
@@ -253,6 +269,26 @@ Raja.prototype.connect = function() {
 		}
 	});
 };
+
+function reargs(url, opts) {
+	var query;
+	if (!opts) opts = {};
+	if (opts.url) {
+		// do not rearg twice
+		return opts;
+	}
+	if (opts.query) {
+		query = opts.query;
+		delete opts.query;
+	} else if (!opts.type && !opts.accept && opts.cache == undefined && opts.once == undefined) {
+		query = opts;
+	}
+	url = urlParams(url, query);
+	url = absolute(keyToUrl(this.room), url);
+	url = urlQuery(url, query);
+	opts.url = url;
+	return opts;
+}
 
 function randomEl(arr) {
 	var index = parseInt(Math.random() * arr.length);
@@ -338,60 +374,71 @@ function urlQuery(url, query) {
 Raja.prototype.urlQuery = urlQuery;
 
 for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
-	Raja.prototype[method] = (function(method) { return function(url, query, body, cb) {
+	Raja.prototype[method] = (function(method) { return function(url, opts, body, cb) {
 		if (!url) throw new Error("Missing url in raja." + method);
 		if (!cb) {
 			if (typeof body == "function") {
 				cb = body;
 				body = null;
-			} else if (typeof query == "function") {
+			} else if (typeof opts == "function") {
 				cb = query;
-				query = null;
-			} else {
-				cb = function(err) {
-					if (err) console.error(err);
-				};
+				opts = null;
 			}
 		}
-		// consume parameters from query object
-		url = urlParams(url, query);
-		url = absolute(keyToUrl(this.room), url);
-		if (/^(HEAD|GET|COPY)$/i.test(method)) {
-			query = query || body || {};
-		} else {
+
+		if (/^(HEAD|GET|COPY)$/i.test(method) == false) {
 			// give priority to body
-			if (!body && query) {
-				body = query;
-				query = null;
+			if (!body && opts) {
+				body = opts;
+				opts = null;
 			}
-			if (body) body = JSON.stringify(body);
 		}
-		url = urlQuery(url, query);
-		var xhr = new XMLHttpRequest();
-		xhr.open(method, url, true);
-		xhr.setRequestHeader('Accept', [
+		opts = reargs.call(this, url, opts);
+		var type = opts.type || 'json';
+		var accept = opts.accept || [
 			'application/json; q=1.0',
 			'text/javascript; q=1.0',
 			'application/xml; q=0.9',
 			'text/xml; q=0.9',
 			'text/plain; q=0.8',
 			'text/html; q=0.7'
-		].join(', '));
-		if (body) xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
-		xhr.onreadystatechange = function (e) {
-			if (xhr.readyState == 4) {
-				var code = xhr.status;
-				var response = xhr.responseXML || tryJSON(xhr.responseText);
+		];
+		if (typeof accept != "string" && accept.join) accept = accept.join(',');
+		var xhr = new XMLHttpRequest();
+		xhr.open(method, url, true);
+		xhr.onreadystatechange = function(e) {
+			if (this.readyState == 4) {
+				var code = this.status;
+				var response = this.response || this.responseXML || tryJSON(this.responseText);
 				if (code >= 200 && code < 400) {
 					cb(null, response);
 				} else {
-					var err = new Error(xhr.responseText);
+					var err = new Error(this.responseText);
 					err.code = code;
 					cb(err);
 				}
 			}
 		};
-		xhr.send(body);
+		xhr.setRequestHeader('Accept', accept);
+		if (type == "html") {
+			// response will contain a document
+			xhr.responseType = "document";
+		}
+		if (body) {
+			var contentType = {
+				text: 'text/plain',
+				json: 'application/json',
+				xml: 'application/xml',
+				html: 'text/html',
+				form: 'application/x-www-form-urlencoded',
+				multipart: 'multipart/form-data'
+			}[type];
+			if (contentType) xhr.setRequestHeader('Content-Type', contentType);
+			if (type == 'json') body = JSON.stringify(body);
+			xhr.send(body);
+		} else {
+			xhr.send();
+		}
 		return xhr;
 	};})(method);
 }

@@ -269,7 +269,21 @@ raja client utilities
 * raja.on(url, <query>, listener)
 
 * raja.METHOD(url, <query>, <body>, cb) where METHOD is GET, PUT, POST, DELETE.  
-  A xhr wrapper, returns json or text, cb(err, objOrText), err.code contains status.
+  A xhr wrapper, xml, json or text is given to callback cb(err, objOrText),
+  err.code contains status.
+  Returns xhr instance.
+  If no callback is provided, xhr is returned with xhr.send(body, cb) function.
+
+* raja.once(url, <query>, cb)
+	same as raja.GET but makes only one request per document instance - a second
+	document instance won't make any request and won't call back.
+	It's a nilpotent version of GET.
+
+* raja.many(url, <query>, cb)
+	same as raja.GET but caches data in the document so requests on other
+	document instances will call back with the same data and without doing
+	further requests.
+	It's an idempotent version of GET.
 
 * raja.urlQuery(url, query) to append query parameters (given as hash array) to a url
 
