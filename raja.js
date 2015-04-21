@@ -25,13 +25,13 @@ Raja.prototype.ready = function() {
 		this.root = document.getElementById('raja');
 		if (!this.root) return;
 		this.state = CONFIG;
-		this.pool = (this.root.getAttribute('client') || '').split(' ');
-		this.namespace = this.root.getAttribute('namespace') || '';
-		this.room = this.root.getAttribute('room');
+		this.pool = (this.root.getAttribute('data-client') || '').split(' ');
+		this.namespace = this.root.getAttribute('data-namespace') || '';
+		this.room = this.root.getAttribute('data-room');
 		if (!this.room) throw new Error("Raja cannot connect without a room url");
 	}
 
-	var lastMod = this.root.getAttribute('last-modified');
+	var lastMod = this.root.getAttribute('data-last-modified');
 	var now = new Date();
 	if (!lastMod) {
 		// work around webkit bug https://bugs.webkit.org/show_bug.cgi?id=4363
@@ -43,7 +43,7 @@ Raja.prototype.ready = function() {
 	}
 
 	this.mtime = tryDate(lastMod) || now;
-	this.root.setAttribute('last-modified', this.mtime.getTime());
+	this.root.setAttribute('data-last-modified', this.mtime.getTime());
 	var att = this.root.getAttribute('data-resources');
 	this.resources = att && JSON.parse(att) || {};
 	for (var url in this.resources) {
@@ -101,7 +101,7 @@ Raja.prototype.update = function() {
 	var oldroom = this.room;
 	var newroom = urlToKey(keyToUrl(oldroom), grants);
 	if (oldroom != newroom) {
-		this.root.setAttribute('room', newroom);
+		this.root.setAttribute('data-room', newroom);
 		this.room = newroom;
 		if (this.io) {
 			this.io.emit('leave', { room: oldroom	});
@@ -252,7 +252,7 @@ Raja.prototype.connect = function() {
 		var fresh = msg.mtime > self.mtime;
 		if (fresh) {
 			self.mtime = msg.mtime;
-			self.root.setAttribute('last-modified', stamp);
+			self.root.setAttribute('data-last-modified', stamp);
 		}
 		var parents = msg.parents;
 		parents.unshift(msg.url);
