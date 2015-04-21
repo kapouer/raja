@@ -151,7 +151,7 @@ Raja.prototype.on = function(url, opts, listener) {
 
 	this._on(opts.url, plistener);
 
-	this.once(opts.url, opts, function(err, data, meta) {
+	var once = this.once(opts.url, opts, function(err, data, meta) {
 		if (err) return self.emit('error', err);
 		plistener(data, meta);
 		if (self.io) return;
@@ -162,25 +162,37 @@ Raja.prototype.on = function(url, opts, listener) {
 				break;
 			}
 		}
-		if (alldone) {
-			setTimeout(function() {
-				self.connect();
-			}, 1);
-		}
+		if (alldone) done();
 	});
+	function done() {
+		setTimeout(function() {
+			self.connect();
+		}, 1);
+	}
+	if (once) {
+		done();
+	}
 	return this;
 };
 
 Raja.prototype.many = function(url, opts, cb) {
+	if (!cb && typeof opts == "function") {
+		cb = opts;
+		opts = null;
+	}
 	opts = reargs.call(this, url, opts);
 	opts.cache = true;
-	this.load(opts.url, opts, cb);
+	return this.load(opts.url, opts, cb);
 };
 
 Raja.prototype.once = function(url, opts, cb) {
+	if (!cb && typeof opts == "function") {
+		cb = opts;
+		opts = null;
+	}
 	opts = reargs.call(this, url, opts);
 	opts.once = true;
-	this.load(opts.url, opts, cb);
+	return this.load(opts.url, opts, cb);
 };
 
 Raja.prototype.load = function(url, opts, cb) {
@@ -189,11 +201,16 @@ Raja.prototype.load = function(url, opts, cb) {
 		opts = null;
 	}
 	opts = reargs.call(this, url, opts);
+	var self = this;
+	if (!cb) cb = function(err) {
+		if (err) self.emit('error', err);
+	};
 	var resources = this.resources;
 	var resource = resources[opts.url];
-	if (!resource) resource = resources[opts.url] = {url: opts.url};
-	else if (opts.once) return;
+	if (!resource) resource = resources[opts.url] = {};
+	else if (opts.once) return true;
 	if (resource.error) return cb(resource.error);
+	if (opts.cache) resource.cache = true;
 	if (resource.data !== undefined) return cb(null, resource.data);
 	if (resource.callbacks) {
 		// resource is currently loading
@@ -201,7 +218,6 @@ Raja.prototype.load = function(url, opts, cb) {
 		return {};
 	}
 	resource.callbacks = [cb];
-	var self = this;
 	var xhr = this.GET(opts.url, opts, function(err, obj) {
 		if (err) {
 			resource.error = err;
@@ -212,10 +228,10 @@ Raja.prototype.load = function(url, opts, cb) {
 		resource.grant = grant ? grant.split(',') : [];
 		resource.mtime = mtime;
 		resource.data = obj;
-		self.update();
 		done(null, obj);
 	});
 	function done(err, data) {
+		self.update();
 		for (var i=0; i < resource.callbacks.length; i++) {
 			try {
 				resource.callbacks[i](err, data, {mtime: resource.mtime, url: opts.url, method: 'get'});
@@ -376,6 +392,7 @@ Raja.prototype.urlQuery = urlQuery;
 
 for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 	Raja.prototype[method] = (function(method) { return function(url, opts, body, cb) {
+		var self = this;
 		if (!url) throw new Error("Missing url in raja." + method);
 		if (!cb) {
 			if (typeof body == "function") {
@@ -385,6 +402,9 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 				cb = opts;
 				opts = null;
 			}
+			if (!cb) cb = function(err) {
+				if (err) self.emit('error', err);
+			};
 		}
 
 		if (/^(HEAD|GET|COPY)$/i.test(method) == false) {
@@ -406,11 +426,11 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 		];
 		if (typeof accept != "string" && accept.join) accept = accept.join(',');
 		var xhr = new XMLHttpRequest();
-		xhr.open(method, url, true);
+		xhr.open(method, opts.url, true);
 		xhr.onreadystatechange = function(e) {
 			if (this.readyState == 4) {
 				var code = this.status;
-				var response = this.response || this.responseXML || tryJSON(this.responseText);
+				var response = this.responseType == "json" && this.response || this.responseXML || tryJSON(this.responseText);
 				if (code >= 200 && code < 400) {
 					cb(null, response);
 				} else {
