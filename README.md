@@ -285,7 +285,8 @@ raja client utilities
 	further requests.
 	It's an idempotent version of GET.
 
-* raja.urlQuery(url, query) to append query parameters (given as hash array) to a url
+* raja.query.parse(str) parse a query string
+* raja.query.stringify(obj) build a query string
 
 * raja.loadScript(url, cb) to insert a script in the document (but not let it
 appear in the html afterwise)
