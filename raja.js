@@ -14,8 +14,8 @@ function Raja() {
 	this.ready();
 }
 
-Raja.prototype.delay = function(method, url, query, listener) {
-	this.delays.push([method, url, query, listener]);
+Raja.prototype.delay = function(method, url, opts, cb) {
+	this.delays.push([method, url, opts, cb]);
 	return this;
 };
 
@@ -76,7 +76,8 @@ Raja.prototype.init = function() {
 		var list = self.delays;
 		delete self.delays;
 		for (var i=0; i < list.length; i++) {
-			self[list[i].shift()].apply(self, list[i]);
+			var mname = list[i].shift();
+			self[mname].apply(self, list[i]);
 		}
 	});
 };
