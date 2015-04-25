@@ -208,7 +208,7 @@ Raja.prototype.load = function(url, opts, cb) {
 	var resources = this.resources;
 	var resource = resources[opts.url];
 	if (!resource) resource = resources[opts.url] = {};
-	else if (opts.once) return true;
+	else if (opts.once && resource.seen) return true;
 	if (resource.error) return cb(resource.error);
 	if (opts.cache) resource.cache = true;
 	if (resource.data !== undefined) return cb(null, resource.data);
