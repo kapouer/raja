@@ -155,25 +155,24 @@ Raja.prototype.on = function(url, opts, listener) {
 		if (err) return self.emit('error', err);
 		plistener(data, meta);
 		if (self.io) return;
-		var alldone = true;
-		for (var url in self.resources) {
-			if (!self.resources[url].mtime) {
-				alldone = false;
-				break;
-			}
-		}
-		if (alldone) done();
+		onDone.call(self);
 	});
-	function done() {
-		setTimeout(function() {
-			self.connect();
-		}, 1);
-	}
-	if (once) {
-		done();
-	}
+	if (once) onDone.call(self);
 	return this;
 };
+
+function onDone() {
+	for (var url in this.resources) {
+		var resource = this.resources[url];
+		if (!resource.error && !resource.mtime) {
+			return;
+		}
+	}
+	var self = this;
+	setTimeout(function() {
+		if (!self.io) self.connect();
+	}, 1);
+}
 
 Raja.prototype.many = function(url, opts, cb) {
 	if (!cb && typeof opts == "function") {
