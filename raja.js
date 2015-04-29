@@ -134,12 +134,14 @@ Raja.prototype.on = function(url, opts, listener) {
 		listener = opts;
 		opts = null;
 	}
-	if (url == "error") return this._on(url, listener);
 
 	if (!this.resources || !window.io) {
 		if (!window.io) this.init();
 		return this.delay('on', url, opts, listener);
 	}
+
+	if (url == "error") return this._on(url, listener);
+
 	var plistener = function() {
 		try {
 			listener.apply(null, Array.prototype.slice.call(arguments));
