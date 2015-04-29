@@ -255,8 +255,14 @@ Raja.prototype.connect = function() {
 	var iohost = randomEl(this.pool);
 	if (iohost.substring(0, 2) == '//') iohost = document.location.protocol + iohost;
 	this.io = window.io(iohost + '/' + this.namespace);
-	var self = this;
 
+	var self = this;
+	this.io.on('connect_error', function(e) {
+		self.emit('error', e);
+	});
+	this.io.on('reconnect', function(attempts) {
+		self.emit('error', {message: 'reconnected', code: attempts});
+	});
 	this.io.on('connect', function() {
 		self.join();
 	});
