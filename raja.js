@@ -404,7 +404,7 @@ Raja.prototype.query = {
 		var obj = {}, pair;
 		for (var i = 0; i < list.length; i++) {
 			pair = list[i].split('=');
-			if (!pair.length) continue;
+			if (!pair.length || !pair[0].length) continue;
 			obj[decodeURIComponent(pair[0])] = pair[1] !== undefined ? decodeURIComponent(pair[1]) : null;
 		}
 		return obj;
