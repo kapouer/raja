@@ -97,18 +97,21 @@ Raja.prototype.update = function() {
 			grants[grant[i]] = true;
 		}
 	}
+	// because update is called independently of raja being in a configured state
+	if (!this.root) return;
 	this.root.setAttribute('data-resources', JSON.stringify(copies));
 
-	var oldroom = this.room;
-	var newroom = urlToKey(keyToUrl(oldroom), grants);
-	if (oldroom.indexOf(newroom) < 0) {
-		console.error("modifying original grants is not supported in this version of raja\n", oldroom, "\nto\n", newroom);
+	var room = this.room;
+	if (!room) return;
+	var newroom = urlToKey(keyToUrl(room), grants);
+	if (room.indexOf(newroom) < 0) {
+		console.error("modifying original grants is not supported in this version of raja\n", room, "\nto\n", newroom);
 		return;
 		/*
 		this.root.setAttribute('data-room', newroom);
 		this.room = newroom;
 		if (this.io) {
-			this.io.emit('leave', { room: oldroom	});
+			this.io.emit('leave', { room: room });
 			this.join();
 		}
 		*/
