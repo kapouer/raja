@@ -101,13 +101,17 @@ Raja.prototype.update = function() {
 
 	var oldroom = this.room;
 	var newroom = urlToKey(keyToUrl(oldroom), grants);
-	if (oldroom != newroom) {
+	if (oldroom.indexOf(newroom) < 0) {
+		console.error("modifying original grants is not supported in this version of raja\n", oldroom, "\nto\n", newroom);
+		return;
+		/*
 		this.root.setAttribute('data-room', newroom);
 		this.room = newroom;
 		if (this.io) {
 			this.io.emit('leave', { room: oldroom	});
 			this.join();
 		}
+		*/
 	}
 };
 
