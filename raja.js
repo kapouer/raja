@@ -10,6 +10,7 @@ var LOADED = 3;
 
 function Raja() {
 	this.delays = [];
+	this.resources = {};
 	this.state = INITIAL;
 	this.ready();
 }
@@ -45,11 +46,12 @@ Raja.prototype.ready = function() {
 	this.mtime = tryDate(lastMod) || now;
 	this.root.setAttribute('data-last-modified', this.mtime.getTime());
 	var att = this.root.getAttribute('data-resources');
-	this.resources = att && JSON.parse(att) || {};
-	for (var url in this.resources) {
-		var resource = this.resources[url];
+	var resources = att && JSON.parse(att) || {};
+	for (var url in resources) {
+		var resource = resources[url];
 		resource.seen = true;
 		resource.mtime = tryDate(resource.mtime);
+		this.resources[url] = resource;
 	}
 };
 
