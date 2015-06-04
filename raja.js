@@ -62,10 +62,10 @@ Raja.prototype.init = function() {
 	loadScript(randomEl(this.pool) + '/socket.io/socket.io.js', function(err) {
 		if (err || !window.io) {
 			if (self.loadTimeout) return;
-			self.state = CONFIG;
 			self.loadTimeout = setTimeout(function() {
 				self.loadTimeout = null;
-				self.ready();
+				self.state = CONFIG;
+				self.init();
 			}, 1000);
 			return;
 		}
@@ -261,13 +261,13 @@ Raja.prototype.join = function() {
 };
 
 Raja.prototype.connect = function() {
-	var iohost = randomEl(this.pool);
-	if (iohost.substring(0, 2) == '//') iohost = document.location.protocol + iohost;
-	this.io = window.io(iohost + '/' + this.namespace);
-
 	var self = this;
+
+	this.io = window.io(iouri());
+
 	this.io.on('connect_error', function(e) {
 		self.emit('error', e);
+		self.io.io.uri = iouri();
 	});
 	this.io.on('reconnect', function(attempts) {
 		self.emit('error', {message: 'reconnected', code: attempts});
@@ -301,6 +301,11 @@ Raja.prototype.connect = function() {
 			}
 		}
 	});
+	function iouri() {
+		var iohost = randomEl(self.pool);
+		if (iohost.substring(0, 2) == '//') iohost = document.location.protocol + iohost;
+		return iohost + '/' + self.namespace;
+	}
 };
 
 function reargs(url, opts) {
