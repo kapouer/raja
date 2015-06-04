@@ -455,16 +455,28 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 			'text/html; q=0.7'
 		];
 		if (typeof accept != "string" && accept.join) accept = accept.join(',');
+
 		var xhr = new XMLHttpRequest();
 		xhr.open(method, opts.url, true);
 		xhr.onreadystatechange = function(e) {
 			if (this.readyState == 4) {
 				var code = this.status;
-				var response = this.responseType == "json" && this.response || this.responseXML || tryJSON(this.responseText);
+				if (!code) return cb(new Error("xhr cancelled " + opts.url));
+				var response, ex;
+				if (this.responseType == "json") {
+					try { response = this.response; } catch(e) { ex = e; }
+				}
+				if (!response) {
+					try { response = this.responseXML; } catch(e) { ex = e; }
+				}
+				if (!response) {
+					try { response = tryJSON(this.responseText); } catch(e) { ex = e; }
+				}
+
 				if (code >= 200 && code < 400) {
 					cb(null, response);
 				} else {
-					var err = new Error(this.responseText);
+					var err = new Error(response || ex || "unreadable response");
 					err.code = code;
 					cb(err);
 				}
