@@ -59,8 +59,10 @@ Raja.prototype.init = function() {
 	if (this.state != CONFIG) return;
 	this.state = LOADING;
 	var self = this;
-	loadScript(randomEl(this.pool) + '/socket.io/socket.io.js', function(err) {
+	var iojsUrl = randomEl(this.pool) + '/socket.io/socket.io.js';
+	loadScript(iojsUrl, function(err) {
 		if (err || !window.io) {
+			console.error("Error loading", iojsUrl);
 			if (self.loadTimeout) return;
 			self.loadTimeout = setTimeout(function() {
 				self.loadTimeout = null;
