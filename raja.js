@@ -340,7 +340,6 @@ function randomEl(arr) {
 }
 
 function absolute(loc, url) {
-	if (/^https?/i.test(url)) return url;
 	if (!loc) loc = document.location;
 	else if (typeof loc == "string") {
 		var ta = document.createElement('a');
@@ -352,6 +351,10 @@ function absolute(loc, url) {
 			host: ta.host
 		};
 	}
+	var baseHref = loc.protocol + '//' + loc.host;
+	if (baseHref.slice(-1) == "/") baseHref = baseHref.slice(0, -1);
+	if (url.indexOf(baseHref) == 0) url = url.substring(baseHref.length);
+	else if (/https?:/.test(url)) return url; // nothing to resolve
 	var path = loc.pathname;
 	if (url && url.substring(0, 1) == '/') {
 		path = url;
@@ -374,8 +377,7 @@ function absolute(loc, url) {
 		}
 		path = comps.join('/');
 	}
-	url = loc.protocol + '//' + loc.host + path;
-	return url;
+	return path;
 }
 Raja.prototype.absolute = absolute;
 
@@ -563,11 +565,13 @@ function tryDate(txt) {
 }
 
 function keyToUrl(key) {
-	var find = /^(.*\s)?(https?:\/\/.+)$/.exec(key);
-	if (find != null && find.length == 3) {
-		if (find[2]) return find[2];
+	var arr = key.split(" ");
+	if (arr.length > 1) {
+		arr.shift();
+		return arr.join(" ");
+	} else {
+		return key;
 	}
-	return key;
 }
 
 function urlToKey(url, grants) {
