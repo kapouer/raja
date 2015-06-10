@@ -278,7 +278,7 @@ Raja.prototype.connect = function() {
 		self.join();
 	});
 	this.io.on('message', function(msg) {
-		if (!msg.url) return;
+		if (!msg.key) return;
 		var data = msg.data;
 		if (data) delete msg.data;
 		var stamp = msg.mtime;
@@ -290,7 +290,7 @@ Raja.prototype.connect = function() {
 			self.root.setAttribute('data-last-modified', stamp);
 		}
 		var parents = msg.parents;
-		parents.unshift(msg.url);
+		parents.unshift(msg.key);
 		var selfUrl = keyToUrl(self.room);
 		for (var i=0; i < parents.length; i++) {
 			var url = keyToUrl(parents[i]);
