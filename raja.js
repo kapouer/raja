@@ -372,17 +372,17 @@ function resolve(url, rel) {
 	if (window.URL) {
 		if (typeof rel == "string") rel = new window.URL(rel, document.location);
 		var rurl = new window.URL(url, rel);
-		return rurl.pathname;
+		return rurl.pathname + rurl.search;
 	}
 	if (typeof rel == "string") rel = parseUrl(rel);
 	var loc = parseUrl(url);
 	// do not resolve incomparable url
-	if (url.protocol != rel.protocol || url.host != rel.host) return url;
+	if (loc.protocol != rel.protocol || loc.host != rel.host) return url;
 	// do not resolve url if it isn't relative
-	var pathname = url.pathname;
-	if (loc.pathname == url || loc.href == url || loc.protocol + url == loc.href) return pathname;
-	pathname = rel.pathname + '/../' + pathname;
-	return parseUrl(pathname).pathname;
+	var path = loc.pathname + loc.search;
+	if (path == url || loc.href == url || loc.protocol + url == loc.href) return path;
+	pathname = rel.pathname + '/../' + url;
+	return parseUrl(pathname).pathname + loc.search;
 }
 Raja.prototype.resolve = resolve;
 
