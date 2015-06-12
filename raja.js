@@ -570,6 +570,7 @@ function tryDate(txt) {
 }
 
 function keyToUrl(key) {
+	if (!key) return key;
 	var arr = key.split(" ");
 	if (arr.length > 1) {
 		arr.shift();
