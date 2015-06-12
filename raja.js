@@ -3,6 +3,10 @@
  */
 (function() {
 
+if (!window.console) window.console = {};
+if (!window.console.log) window.console.log = function() {};
+if (!window.console.error) window.console.error = function() {};
+
 var INITIAL = 0;
 var CONFIG = 1;
 var LOADING = 2;
@@ -135,7 +139,7 @@ Raja.prototype.emit = function(what) {
 	}
 	if (what == "error" && this.listeners("error").length == 0) {
 		args.shift();
-		console.error.apply(console, args);
+		Function.prototype.apply.call(console.error, console, args);
 	}
 };
 
