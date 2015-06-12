@@ -149,6 +149,9 @@ Raja.prototype.on = function(url, opts, listener) {
 		listener = opts;
 		opts = null;
 	}
+	if (!listener) {
+		throw new Error("expected raja.on(url, <opts>, listener)");
+	}
 
 	if (!this.resources || !window.io) {
 		if (!window.io) this.init();
