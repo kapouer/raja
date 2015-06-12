@@ -124,7 +124,7 @@ Raja.prototype.update = function() {
 
 Raja.prototype.emit = function(what) {
 	var args = Array.prototype.slice.call(arguments, 0);
-	var url = what != null && this.absolute(keyToUrl(this.room), what);
+	var url = what != null && this.resolve(what, keyToUrl(this.room));
 	if (what != 'error') {
 		args[0] = url;
 	}
@@ -324,7 +324,7 @@ function reargs(url, opts) {
 		query = opts;
 	}
 	url = urlParams(url, query);
-	url = absolute(keyToUrl(this.room), url);
+	url = resolve(url, keyToUrl(this.room));
 	var str = this.query.stringify(query);
 	if (str) {
 		url += url.indexOf('?') > 0 ? '&' : '?';
@@ -339,47 +339,45 @@ function randomEl(arr) {
 	return arr[index];
 }
 
-function absolute(loc, url) {
-	if (!loc) loc = document.location;
-	else if (typeof loc == "string") {
-		var ta = document.createElement('a');
-		ta.href = loc;
-		loc = {
-			href: ta.href,
-			pathname: ta.pathname,
-			protocol: ta.protocol,
-			host: ta.host
-		};
-	}
-	var baseHref = loc.protocol + '//' + loc.host;
-	if (baseHref.slice(-1) == "/") baseHref = baseHref.slice(0, -1);
-	if (url.indexOf(baseHref) == 0) url = url.substring(baseHref.length);
-	else if (/https?:/.test(url)) return url; // nothing to resolve
-	var path = loc.pathname;
-	if (url && url.substring(0, 1) == '/') {
-		path = url;
-	} else {
-		var adds = url.split('/');
-		var comps = path.split('/');
-		var prev = comps.pop();
-		while (adds.length) {
-			var toAdd = adds.shift();
-			last = comps.pop();
-			if (toAdd == '..') {
-				// do not add last back
-			} else if (toAdd == '.') {
-				comps.push(last);
-				if (prev != '') comps.push(prev);
-			} else {
-				comps.push(last);
-				comps.push(toAdd);
-			}
-		}
-		path = comps.join('/');
-	}
-	return path;
+function parseUrl(url) {
+	var ta = document.createElement('a');
+	ta.setAttribute('href', url);
+	ta.setAttribute('href', ta.href); // IE <= 10
+	var loc = {
+		href: ta.href,
+		protocol: ta.protocol ? ta.protocol.replace(/:$/, '') : '',
+		host: ta.host,
+		search: ta.search ? ta.search.replace(/^\?/, '') : '',
+		hash: ta.hash ? ta.hash.replace(/^#/, '') : '',
+		hostname: ta.hostname,
+		port: ta.port,
+		pathname: ta.pathname.charAt(0) == '/' ? ta.pathname : '/' + ta.pathname
+	};
+	if (loc.search) loc.search = '?' + loc.search;
+	if (loc.hash) loc.hash = '#' + loc.hash;
+	if (loc.protocol) loc.protocol += ':';
+	return loc;
 }
-Raja.prototype.absolute = absolute;
+Raja.prototype.parseUrl = parseUrl;
+
+function resolve(url, rel) {
+	if (!rel) rel = document.location;
+	if (window.URL) {
+		if (typeof rel == "string") rel = new window.URL(rel, document.location);
+		var rurl = new window.URL(url, rel);
+		return rurl.pathname;
+	}
+	if (typeof rel == "string") rel = parseUrl(rel);
+	var loc = parseUrl(url);
+	// do not resolve incomparable url
+	if (url.protocol != rel.protocol || url.host != rel.host) return url;
+	// do not resolve url if it isn't relative
+	var pathname = url.pathname;
+	if (loc.pathname == url || loc.href == url || loc.protocol + url == loc.href) return pathname;
+	pathname = rel.pathname + '/../' + pathname;
+	return parseUrl(pathname).pathname;
+}
+Raja.prototype.resolve = resolve;
 
 function urlParams(url, params) {
 	if (!params) return url;
