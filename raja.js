@@ -153,8 +153,8 @@ Raja.prototype.on = function(url, opts, listener) {
 		throw new Error("expected raja.on(url, <opts>, listener)");
 	}
 
-	if (!this.resources || !window.io) {
-		if (!window.io) this.init();
+	if (this.state != LOADED) {
+		if (this.state == CONFIG) this.init();
 		return this.delay('on', url, opts, listener);
 	}
 
