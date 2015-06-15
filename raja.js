@@ -493,7 +493,11 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 		xhr.onreadystatechange = function(e) {
 			if (this.readyState == 4) {
 				var code = this.status;
-				if (!code) return cb(new Error("xhr cancelled " + opts.url));
+				if (!code) {
+					var err = new Error("xhr cancelled " + opts.url);
+					err.code = 0;
+					return cb(err);
+				}
 				var response, ex;
 				if (this.responseType == "json") {
 					try { response = this.response; } catch(e) { ex = e; }
