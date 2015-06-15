@@ -293,7 +293,7 @@ Raja.prototype.connect = function() {
 		self.io.io.uri = iouri();
 		self.events.emit('connect_error', e);
 	});
-	this.io.on('reconnect_error', function(attemps) {
+	this.io.on('reconnect_error', function(attempts) {
 		self.io.io.uri = iouri();
 		self.events.emit('reconnect_error', attempts);
 	});
