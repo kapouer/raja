@@ -13,16 +13,36 @@ var LOADING = 2;
 var LOADED = 3;
 
 function Raja() {
-	this.delays = [];
 	this.resources = {};
 	this.state = INITIAL;
+	var self = this;
+	this.events = {
+		on: function(evt, listener) {
+			delay(self.events, evt, listener);
+			return self.events;
+		},
+		emit: function(what) {
+			if (what == "error") {
+				Function.prototype.apply.call(console.error, console, Array.prototype.slice.call(arguments, 1));
+			}
+		}
+	};
 	this.ready();
 }
 
-Raja.prototype.delay = function(method, url, opts, cb) {
-	this.delays.push([method, url, opts, cb]);
-	return this;
-};
+function delay(obj) {
+	if (!obj.delays) obj.delays = [];
+	obj.delays.push(Array.prototype.slice.call(arguments, 1));
+}
+
+function undelay(obj) {
+	if (!obj.delays) return;
+	var list = obj.delays;
+	delete obj.delays;
+	for (var i=0; i < list.length; i++) {
+		obj.on.apply(obj, list[i]);
+	}
+}
 
 Raja.prototype.ready = function() {
 	var self = this;
@@ -76,17 +96,20 @@ Raja.prototype.init = function() {
 			return;
 		}
 		self.state = LOADED;
+
 		var proto = window.io.Manager.prototype;
+
 		self._on = proto.on;
 		self._emit = proto.emit;
 		self.off = proto.off;
 		self.listeners = proto.listeners;
-		var list = self.delays;
-		delete self.delays;
-		for (var i=0; i < list.length; i++) {
-			var mname = list[i].shift();
-			self[mname].apply(self, list[i]);
-		}
+		undelay(self);
+
+		self.events.on = proto.on;
+		self.events.emit = proto.emit;
+		self.events.off = proto.off;
+		self.events.listeners = proto.listeners;
+		undelay(self.events);
 	});
 };
 
@@ -127,19 +150,13 @@ Raja.prototype.update = function() {
 };
 
 Raja.prototype.emit = function(what) {
+	if (!what) throw new Error("Missing event for raja.emit");
 	var args = Array.prototype.slice.call(arguments, 0);
-	var url = what != null && this.resolve(what, keyToUrl(this.room));
-	if (what != 'error') {
-		args[0] = url;
-	}
+	args[0] = this.resolve(what, keyToUrl(this.room));
 	try {
 		this._emit.apply(this, args);
 	} catch(e) {
 		console.error(e);
-	}
-	if (what == "error" && this.listeners("error").length == 0) {
-		args.shift();
-		Function.prototype.apply.call(console.error, console, args);
 	}
 };
 
@@ -150,21 +167,20 @@ Raja.prototype.on = function(url, opts, listener) {
 		opts = null;
 	}
 	if (!listener) {
-		throw new Error("expected raja.on(url, <opts>, listener)");
+		throw new Error("Missing listener for raja.on");
 	}
 
 	if (this.state != LOADED) {
 		if (this.state == CONFIG) this.init();
-		return this.delay('on', url, opts, listener);
+		delay(this, url, opts, listener);
+		return this;
 	}
-
-	if (url == "error") return this._on(url, listener);
 
 	var plistener = function() {
 		try {
 			listener.apply(null, Array.prototype.slice.call(arguments));
 		} catch(e) {
-			self.emit('error', e);
+			self.events.emit('error', e);
 		}
 	};
 	opts = reargs.call(this, url, opts);
@@ -172,7 +188,7 @@ Raja.prototype.on = function(url, opts, listener) {
 	this._on(opts.url, plistener);
 
 	var once = this.once(opts.url, opts, function(err, data, meta) {
-		if (err) return self.emit('error', err);
+		if (err) return self.events.emit('error', err);
 		plistener(data, meta);
 		if (self.io) return;
 		onDone.call(self);
@@ -222,7 +238,7 @@ Raja.prototype.load = function(url, opts, cb) {
 	opts = reargs.call(this, url, opts);
 	var self = this;
 	if (!cb) cb = function(err) {
-		if (err) self.emit('error', err);
+		if (err) self.events.emit('error', err);
 	};
 	var resources = this.resources;
 	var resource = resources[opts.url];
@@ -275,18 +291,16 @@ Raja.prototype.connect = function() {
 	this.io = window.io(iouri());
 
 	this.io.on('connect_error', function(e) {
-		self.emit('error', {message: 'connection error', code: e.code});
 		self.io.io.uri = iouri();
+		self.events.emit('connect_error', e);
 	});
-	this.io.on('reconnect_error', function(attempts) {
-		self.emit('error', {message: 'reconnection error', code: attempts});
+	this.io.on('reconnect_error', function(attemps) {
 		self.io.io.uri = iouri();
-	});
-	this.io.on('reconnect', function(attempts) {
-		self.emit('error', {message: 'reconnected', code: attempts});
+		self.events.emit('reconnect_error', attempts);
 	});
 	this.io.on('connect', function() {
 		self.join();
+		self.events.emit('connect');
 	});
 	this.io.on('message', function(msg) {
 		if (!msg.key) return;
@@ -451,7 +465,7 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 				opts = null;
 			}
 			if (!cb) cb = function(err) {
-				if (err) self.emit('error', err);
+				if (err) self.events.emit('error', err);
 			};
 		}
 
