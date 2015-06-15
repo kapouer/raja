@@ -98,17 +98,17 @@ Raja.prototype.init = function() {
 
 		var proto = window.io.Manager.prototype;
 
-		self._on = proto.on;
-		self._emit = proto.emit;
-		self.off = proto.off;
-		self.listeners = proto.listeners;
-		undelay(self);
-
 		self.events.on = proto.on;
 		self.events.emit = proto.emit;
 		self.events.off = proto.off;
 		self.events.listeners = proto.listeners;
 		undelay(self.events);
+
+		self._on = proto.on;
+		self._emit = proto.emit;
+		self.off = proto.off;
+		self.listeners = proto.listeners;
+		undelay(self);
 	});
 };
 
