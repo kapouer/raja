@@ -275,7 +275,11 @@ Raja.prototype.connect = function() {
 	this.io = window.io(iouri());
 
 	this.io.on('connect_error', function(e) {
-		self.emit('error', e);
+		self.emit('error', {message: 'connection error', code: e.code});
+		self.io.io.uri = iouri();
+	});
+	this.io.on('reconnect_error', function(attempts) {
+		self.emit('error', {message: 'reconnection error', code: attempts});
 		self.io.io.uri = iouri();
 	});
 	this.io.on('reconnect', function(attempts) {
