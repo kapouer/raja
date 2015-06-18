@@ -438,8 +438,8 @@ Raja.prototype.query = {
 	parse: function(str) {
 		if (str == undefined) {
 			str = document.location.search;
-			if (str && str[0] == "?") str = str.substring(1);
 		}
+		if (str && str[0] == "?") str = str.substring(1);
 		var list = str.split('&');
 		var obj = {}, pair;
 		for (var i = 0; i < list.length; i++) {
