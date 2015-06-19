@@ -422,10 +422,10 @@ Raja.prototype.query = {
 		var comps = [];
 		for (var k in query) {
 			var val = query[k];
-			if (typeof val == "object") { // deal only with select elements here
-				 for (var i=0; i < val.length; i++) {
-				 	comps.push({key: k, val: val[i]});
-				 }
+			if (val && typeof val == "object") { // deal only with select elements here
+				for (var i=0; i < val.length; i++) {
+					comps.push({key: k, val: val[i]});
+				}
 			} else {
 				comps.push({key: k, val: query[k]});
 			}
@@ -450,11 +450,18 @@ Raja.prototype.query = {
 		}
 		if (str && str[0] == "?") str = str.substring(1);
 		var list = str.split('&');
-		var obj = {}, pair;
+		var obj = {}, pair, name, val;
 		for (var i = 0; i < list.length; i++) {
 			pair = list[i].split('=');
 			if (!pair.length || !pair[0].length) continue;
-			obj[decodeURIComponent(pair[0])] = pair[1] !== undefined ? decodeURIComponent(pair[1]) : null;
+			name = decodeURIComponent(pair[0]);
+			val = pair[1] !== undefined ? decodeURIComponent(pair[1]) : null;
+			if (obj[name]) {
+				if (!obj[name].push) obj[name] = [obj[name]];
+				obj[name].push(val);
+			} else {
+				obj[name] = val;
+			}
 		}
 		return obj;
 	}
