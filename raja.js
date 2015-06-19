@@ -420,7 +420,16 @@ Raja.prototype.urlParams = urlParams;
 Raja.prototype.query = {
 	stringify: function(query) {
 		var comps = [];
-		for (var k in query) comps.push({key: k, val: query[k]});
+		for (var k in query) {
+			var val = query[k];
+			if (typeof val == "object") { // deal only with select elements here
+				 for (var i=0; i < val.length; i++) {
+				 	comps.push({key: k, val: val[i]});
+				 }
+			} else {
+				comps.push({key: k, val: query[k]});
+			}
+		}
 		comps.sort(function(a, b) {
 			if (a.key < b.key) return 1;
 			else if (a.key > b.key) return -1;
