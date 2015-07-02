@@ -77,6 +77,7 @@ Raja.prototype.ready = function() {
 		resource.mtime = tryDate(resource.mtime);
 		this.resources[url] = resource;
 	}
+	if (this.delays) this.init();
 };
 
 Raja.prototype.init = function() {
