@@ -7,18 +7,24 @@ if (!window.console) window.console = {};
 if (!window.console.log) window.console.log = function() {};
 if (!window.console.error) window.console.error = function() {};
 
-var INITIAL = 0;
-var CONFIG = 1;
-var LOADING = 2;
-var LOADED = 3;
+var delayeds = {};
 
 function Raja() {
 	this.resources = {};
-	this.state = INITIAL;
+
+	// DOMContentLoaded happened ?
+	this.domReady = false;
+	// socket.io.js 0 no, 1 loading, 2 loaded
+	this.ioReady = 0;
+	// raja root exists ?
+	this.root = null;
+	// must connect to room ?
+	this.room = null;
+
 	var self = this;
 	this.events = {
 		on: function(evt, listener) {
-			delay(self.events, evt, listener);
+			delay('events', !!self.events._on, '_on', self.events, evt, listener);
 			return self.events;
 		},
 		emit: function(what) {
@@ -27,47 +33,52 @@ function Raja() {
 			}
 		}
 	};
-	this.ready();
+	if (document.readyState == "interactive" || document.readyState == "completed") {
+		this.domReady = true;
+		self.ready();
+	} else {
+		document.addEventListener('DOMContentLoaded', documentLoaded, false);
+	}
+	function documentLoaded() {
+		self.domReady = true;
+		document.removeEventListener('DOMContentLoaded', documentLoaded, false);
+		self.ready();
+	}
 }
 
-function delay(obj) {
-	if (!obj.delays) obj.delays = [];
-	obj.delays.push(Array.prototype.slice.call(arguments, 1));
+function delay(name, now, func, self) {
+	if (now) {
+		if (typeof func == 'string') func = self[func];
+		func.apply(self, Array.prototype.slice.call(arguments, 4));
+	} else {
+		if (!delayeds[name]) delayeds[name] = [];
+		delayeds[name].push(Array.prototype.slice.call(arguments, 2));
+	}
 }
 
-function undelay(obj) {
-	if (!obj.delays) return;
-	var list = obj.delays;
-	delete obj.delays;
+function undelay(name) {
+	var list = delayeds[name];
+	if (!list) return;
+	delete delayeds[name];
+	var item, func, self;
 	for (var i=0; i < list.length; i++) {
-		obj.on.apply(obj, list[i]);
+		item = list[i];
+		func = item.shift();
+		self = item.shift();
+		if (typeof func == 'string') func = self[func];
+		func.apply(self, item);
 	}
 }
 
-Raja.prototype.ready = function() {
-	var self = this;
-	if (this.state == INITIAL) {
-		this.root = document.getElementById('raja');
-		if (!this.root) return;
-		this.state = CONFIG;
-		this.pool = (this.root.getAttribute('data-client') || '').split(' ');
-		this.namespace = this.root.getAttribute('data-namespace') || '';
-		this.room = this.root.getAttribute('data-room');
-		if (!this.room) throw new Error("Raja cannot connect without a room url");
-	}
+function loadRoot() {
+	if (this.root) return;
+	this.root = document.getElementById('raja');
+	if (!this.root) return;
+	this.pool = (this.root.getAttribute('data-client') || '').split(' ');
+	this.namespace = this.root.getAttribute('data-namespace') || '';
+	this.room = this.root.getAttribute('data-room');
 
-	var lastMod = this.root.getAttribute('data-last-modified');
-	var now = new Date();
-	if (!lastMod) {
-		// work around webkit bug https://bugs.webkit.org/show_bug.cgi?id=4363
-		lastMod = Date.parse(document.lastModified);
-		var diff = (new Date(now.toLocaleString())).getTimezoneOffset() - now.getTimezoneOffset();
-		if (!diff) diff = now.getTimezoneOffset() * 60000;
-		else diff = 0;
-		lastMod = lastMod - diff;
-	}
-
-	this.mtime = tryDate(lastMod) || now;
+	this.mtime = tryDate(this.root.getAttribute('data-last-modified')) || new Date();
 	this.root.setAttribute('data-last-modified', this.mtime.getTime());
 	var att = this.root.getAttribute('data-resources');
 	var resources = att && JSON.parse(att) || {};
@@ -77,12 +88,23 @@ Raja.prototype.ready = function() {
 		resource.mtime = tryDate(resource.mtime);
 		this.resources[url] = resource;
 	}
-	if (this.delays) this.init();
+	undelay('room');
+}
+
+Raja.prototype.ready = function() {
+	// only called by raja script tag
+	loadRoot.call(this);
+	if (this.room && this.domReady) {
+		undelay('loadDone');
+		undelay('load');
+	}
+	checkConnect.call(this);
 };
 
-Raja.prototype.init = function() {
-	if (this.state != CONFIG) return;
-	this.state = LOADING;
+Raja.prototype.loadIo = function() {
+	if (!this.pool) return;
+	if (this.ioReady > 0) return;
+	this.ioReady = 1;
 	var self = this;
 	var iojsUrl = randomEl(this.pool) + '/socket.io/socket.io.js';
 	loadScript(iojsUrl, function(err) {
@@ -90,26 +112,28 @@ Raja.prototype.init = function() {
 			if (self.loadTimeout) return;
 			self.loadTimeout = setTimeout(function() {
 				self.loadTimeout = null;
-				self.state = CONFIG;
-				self.init();
+				self.ioReady = 0;
+				self.loadIo();
 			}, 1000);
 			return;
 		}
-		self.state = LOADED;
+		self.ioReady = 2;
 
 		var proto = window.io.Manager.prototype;
 
-		self.events.on = proto.on;
+		self.events._on = proto.on;
 		self.events.emit = proto.emit;
 		self.events.off = proto.off;
 		self.events.listeners = proto.listeners;
-		undelay(self.events);
+		undelay('events');
 
 		self._on = proto.on;
 		self._emit = proto.emit;
 		self.off = proto.off;
 		self.listeners = proto.listeners;
-		undelay(self);
+		undelay('on');
+		undelay('emit');
+		checkConnect.call(self);
 	});
 };
 
@@ -137,7 +161,6 @@ Raja.prototype.update = function() {
 	var newroom = urlToKey(keyToUrl(room), grants);
 	if (room.indexOf(newroom) < 0) {
 		console.error("modifying original grants is not supported in this version of raja\n", room, "\nto\n", newroom);
-		return;
 		/*
 		this.root.setAttribute('data-room', newroom);
 		this.room = newroom;
@@ -153,11 +176,7 @@ Raja.prototype.emit = function(what) {
 	if (!what) throw new Error("Missing event for raja.emit");
 	var args = Array.prototype.slice.call(arguments, 0);
 	args[0] = this.resolve(what, keyToUrl(this.room));
-	try {
-		this._emit.apply(this, args);
-	} catch(e) {
-		console.error(e);
-	}
+	delay.apply(null, ['emits', !!this._emit, '_emit', this].concat(args));
 };
 
 Raja.prototype.on = function(url, opts, listener) {
@@ -169,13 +188,12 @@ Raja.prototype.on = function(url, opts, listener) {
 	if (!listener) {
 		throw new Error("Missing listener for raja.on");
 	}
+	delay('room', this.room, doOn, this, url, opts, listener);
+	return this;
+};
 
-	if (this.state != LOADED) {
-		if (this.state == CONFIG) this.init();
-		delay(this, url, opts, listener);
-		return this;
-	}
-
+function doOn(url, opts, listener) {
+	this.loadIo();
 	var plistener = function() {
 		try {
 			listener.apply(null, Array.prototype.slice.call(arguments));
@@ -184,20 +202,17 @@ Raja.prototype.on = function(url, opts, listener) {
 		}
 	};
 	opts = reargs.call(this, url, opts);
-
-	this._on(opts.url, plistener);
-
+	delay('on', this.ioReady == 2, '_on', this, opts.url, plistener);
 	var once = this.once(opts.url, opts, function(err, data, meta) {
 		if (err) return self.events.emit('error', err);
 		plistener(data, meta);
-		if (self.io) return;
-		onDone.call(self);
+		if (self.room && !self.io && self.ioReady == 2) checkConnect.call(self);
 	});
-	if (once) onDone.call(self);
-	return this;
-};
+	if (once && self.room && !self.io && self.ioReady == 2) checkConnect.call(this);
+}
 
-function onDone() {
+function checkConnect() {
+	if (!this.room || this.io || this.ioReady != 2) return;
 	for (var url in this.resources) {
 		var resource = this.resources[url];
 		if (!resource.error && !resource.mtime) {
@@ -206,8 +221,8 @@ function onDone() {
 	}
 	var self = this;
 	setTimeout(function() {
-		if (!self.io) self.connect();
-	}, 1);
+		self.connect();
+	}, 0);
 }
 
 Raja.prototype.many = function(url, opts, cb) {
@@ -215,9 +230,9 @@ Raja.prototype.many = function(url, opts, cb) {
 		cb = opts;
 		opts = null;
 	}
-	opts = reargs.call(this, url, opts);
+	if (!opts) opts = {};
 	opts.cache = true;
-	return this.load(opts.url, opts, cb);
+	this.load(url, opts, cb);
 };
 
 Raja.prototype.once = function(url, opts, cb) {
@@ -225,9 +240,9 @@ Raja.prototype.once = function(url, opts, cb) {
 		cb = opts;
 		opts = null;
 	}
-	opts = reargs.call(this, url, opts);
+	if (!opts) opts = {};
 	opts.once = true;
-	return this.load(opts.url, opts, cb);
+	this.load(url, opts, cb);
 };
 
 Raja.prototype.load = function(url, opts, cb) {
@@ -235,11 +250,17 @@ Raja.prototype.load = function(url, opts, cb) {
 		cb = opts;
 		opts = null;
 	}
-	opts = reargs.call(this, url, opts);
+	if (!opts) opts = {};
 	var self = this;
 	if (!cb) cb = function(err) {
 		if (err) self.events.emit('error', err);
 	};
+
+	delay('load', this.domReady && this.root, load, this, url, opts, cb);
+};
+
+function load(url, opts, cb) {
+	opts = reargs.call(this, url, opts);
 	var resources = this.resources;
 	var resource = resources[opts.url];
 	if (!resource) {
@@ -247,6 +268,7 @@ Raja.prototype.load = function(url, opts, cb) {
 	} else if (opts.once) {
 		if (resource.seen) return true;
 	}
+	resource.url = opts.url;
 	if (resource.error) return cb(resource.error);
 	if (opts.cache) resource.cache = true;
 	if (resource.data !== undefined) return cb(null, resource.data);
@@ -256,30 +278,35 @@ Raja.prototype.load = function(url, opts, cb) {
 		return {};
 	}
 	resource.callbacks = [cb];
+	var self = this;
 	var xhr = this.GET(opts.url, opts, function(err, obj) {
 		if (err) {
 			resource.error = err;
-			return done(err);
+		} else {
+			var grant = xhr.getResponseHeader("X-Grant");
+			resource.grant = grant ? grant.split(',') : [];
+			resource.mtime = tryDate(xhr.getResponseHeader("Last-Modified"));
+			resource.data = obj;
 		}
-		var mtime = tryDate(xhr.getResponseHeader("Last-Modified"));
-		var grant = xhr.getResponseHeader("X-Grant");
-		resource.grant = grant ? grant.split(',') : [];
-		resource.mtime = mtime;
-		resource.data = obj;
-		done(null, obj);
+		delay('loadDone', self.domReady, loadDone, self, resource);
 	});
-	function done(err, data) {
-		self.update();
-		for (var i=0; i < resource.callbacks.length; i++) {
-			try {
-				resource.callbacks[i](err, data, {mtime: resource.mtime, url: opts.url, method: 'get'});
-			} catch(e) {
-				console.error(e);
-			}
+}
+
+function loadDone(resource) {
+	this.update();
+	for (var i=0; i < resource.callbacks.length; i++) {
+		try {
+			resource.callbacks[i](resource.error, resource.data, {
+				mtime: resource.mtime,
+				url: resource.url,
+				method: 'get'
+			});
+		} catch(e) {
+			console.error(e);
 		}
-		delete resource.callbacks;
 	}
-};
+	delete resource.callbacks;
+}
 
 Raja.prototype.join = function() {
 	this.io.emit('join', {
@@ -289,6 +316,7 @@ Raja.prototype.join = function() {
 };
 
 Raja.prototype.connect = function() {
+	if (this.io) return;
 	var self = this;
 
 	this.io = window.io(iouri());
@@ -341,8 +369,8 @@ Raja.prototype.connect = function() {
 function reargs(url, opts) {
 	var query;
 	if (!opts) opts = {};
-	if (opts.url) {
-		// do not rearg twice
+	if (opts.url || !this.room) {
+		// not twice, not without a room
 		return opts;
 	}
 	if (opts.query) {
