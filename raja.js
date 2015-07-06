@@ -201,7 +201,7 @@ function doOn(url, opts, listener) {
 			self.events.emit('error', e);
 		}
 	};
-	opts = reargs.call(this, url, opts);
+	opts = reargs.call(this, resolve(url, keyToUrl(this.room)), opts);
 	delay('on', this.ioReady == 2, '_on', this, opts.url, plistener);
 	var once = this.once(opts.url, opts, function(err, data, meta) {
 		if (err) return self.events.emit('error', err);
@@ -260,7 +260,7 @@ Raja.prototype.load = function(url, opts, cb) {
 };
 
 function load(url, opts, cb) {
-	opts = reargs.call(this, url, opts);
+	opts = reargs.call(this, resolve(url, keyToUrl(this.room)), opts);
 	var resources = this.resources;
 	var resource = resources[opts.url];
 	if (!resource) {
@@ -380,7 +380,6 @@ function reargs(url, opts) {
 		query = opts;
 	}
 	url = urlParams(url, query);
-	url = resolve(url, keyToUrl(this.room));
 	var str = this.query.stringify(query);
 	if (str) {
 		url += url.indexOf('?') > 0 ? '&' : '?';
@@ -523,7 +522,7 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 				opts = null;
 			}
 		}
-		opts = reargs.call(this, url, opts);
+		opts = reargs.call(this, resolve(url), opts);
 		var type = opts.type || 'json';
 		var accept = opts.accept || [
 			'application/json; q=1.0',
