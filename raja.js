@@ -256,7 +256,7 @@ Raja.prototype.load = function(url, opts, cb) {
 		if (err) self.events.emit('error', err);
 	};
 
-	delay('load', this.domReady && this.root, load, this, url, opts, cb);
+	delay('load', this.domReady && this.room, load, this, url, opts, cb);
 };
 
 function load(url, opts, cb) {
@@ -369,7 +369,7 @@ Raja.prototype.connect = function() {
 function reargs(url, opts) {
 	var query;
 	if (!opts) opts = {};
-	if (opts.url || !this.room) {
+	if (opts.url) {
 		// not twice, not without a room
 		return opts;
 	}
