@@ -367,17 +367,21 @@ Raja.prototype.connect = function() {
 };
 
 function reargs(url, opts) {
-	var query;
 	if (!opts) opts = {};
 	if (opts.url) {
 		// not twice, not without a room
 		return opts;
 	}
+	var query;
 	if (opts.query) {
 		query = opts.query;
 		delete opts.query;
-	} else if (!opts.type && !opts.accept && opts.cache == undefined && opts.once == undefined) {
-		query = opts;
+	} else {
+		query = {};
+		for (var key in opts) {
+			if ({type: 1, accept:1, cache: 1, once: 1, url: 1, headers: 1}[key]) continue;
+			query[key] = opts[key];
+		}
 	}
 	url = urlParams(url, query);
 	var str = this.query.stringify(query);
