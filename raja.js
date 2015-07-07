@@ -156,7 +156,9 @@ Raja.prototype.update = function() {
 		}
 	}
 	// because update is called independently of raja being in a configured state
-	if (!this.root) return;
+	if (!this.root) {
+		return;
+	}
 	this.root.setAttribute('data-resources', JSON.stringify(copies));
 
 	var room = this.room;
