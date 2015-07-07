@@ -146,9 +146,18 @@ Raja.prototype.update = function() {
 	for (var url in this.resources) {
 		var resource = this.resources[url];
 		var copy = {};
-		if (resource.mtime) copy.mtime = resource.mtime;
-		if (resource.cache && resource.data != undefined) copy.data = resource.data;
-		if (resource.error !== undefined) copy.error = resource.error;
+		if (resource.mtime) {
+			copy.mtime = resource.mtime;
+		}
+		if (resource.cache && resource.data != undefined) {
+			copy.data = resource.data;
+		}
+		if (resource.error !== undefined) {
+			copy.error = {};
+			['name', 'code', 'message'].forEach(function(key) {
+				if (resource.error[key] != null) copy.error[key] = resource.error[key];
+			});
+		}
 		copies[url] = copy;
 		var grant = this.resources[url].grant || [];
 		for (var i=0; i < grant.length; i++) {
@@ -286,7 +295,7 @@ function load(url, opts, cb) {
 	var self = this;
 	var xhr = this.GET(opts.url, opts, function(err, obj) {
 		if (err) {
-			resource.error = err.code !== undefined ? err.code : err.toString();
+			resource.error = err;
 		} else {
 			var grant = xhr.getResponseHeader("X-Grant");
 			resource.grant = grant ? grant.split(',') : [];
