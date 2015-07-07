@@ -20,6 +20,8 @@ function Raja() {
 	this.root = null;
 	// must connect to room ?
 	this.room = null;
+	// has ui ?
+	this.ui = document.documentElement.offsetWidth || document.documentElement.offsetHeight;
 
 	var self = this;
 	this.events = {
