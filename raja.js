@@ -148,6 +148,7 @@ Raja.prototype.update = function() {
 		var copy = {};
 		if (resource.mtime) copy.mtime = resource.mtime;
 		if (resource.cache && resource.data != undefined) copy.data = resource.data;
+		if (resource.error !== undefined) copy.error = resource.error;
 		copies[url] = copy;
 		var grant = this.resources[url].grant || [];
 		for (var i=0; i < grant.length; i++) {
@@ -283,7 +284,7 @@ function load(url, opts, cb) {
 	var self = this;
 	var xhr = this.GET(opts.url, opts, function(err, obj) {
 		if (err) {
-			resource.error = err;
+			resource.error = err.code !== undefined ? err.code : err.toString();
 		} else {
 			var grant = xhr.getResponseHeader("X-Grant");
 			resource.grant = grant ? grant.split(',') : [];
