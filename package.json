@@ -1,6 +1,6 @@
 {
   "name": "raja",
-  "version": "0.26.14",
+  "version": "0.26.15",
   "description": "distributed cache tracking resources, pages, assets, builds and their dependencies",
   "main": "lib/core.js",
   "scripts": {
