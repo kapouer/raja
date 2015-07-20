@@ -383,6 +383,7 @@ Raja.prototype.connect = function() {
 function reargs(url, opts) {
 	if (!opts) opts = {};
 	if (opts.url) {
+		// TODO opts should really be immutable - opts.url is changing here
 		// not twice, not without a room
 		return opts;
 	}
