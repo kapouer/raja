@@ -97,8 +97,8 @@ Raja.prototype.ready = function() {
 	// only called by raja script tag
 	loadRoot.call(this);
 	if (this.room && this.domReady) {
-		undelay('loadDone');
 		undelay('load');
+		undelay('loadDone');
 	}
 	checkConnect.call(this);
 };
@@ -229,7 +229,7 @@ function checkConnect() {
 	if (!this.room || this.io || this.ioReady != 2) return;
 	for (var url in this.resources) {
 		var resource = this.resources[url];
-		if (!resource.error && !resource.mtime) {
+		if (resource.callbacks) {
 			return;
 		}
 	}
@@ -320,6 +320,7 @@ function loadDone(resource) {
 		}
 	}
 	delete resource.callbacks;
+	checkConnect.call(this);
 }
 
 Raja.prototype.join = function() {
