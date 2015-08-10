@@ -286,12 +286,14 @@ function load(url, opts, cb) {
 	if (resource.error) return cb(resource.error);
 	if (opts.cache) resource.cache = true;
 	if (resource.data !== undefined) return cb(null, resource.data);
-	if (resource.callbacks) {
+	var cbs = resource.callbacks;
+	if (!cbs) resource.callbacks = [];
+	if (cb) resource.callbacks.push(cb);
+	if (cbs) {
 		// resource is currently loading
-		resource.callbacks.push(cb);
 		return {};
 	}
-	resource.callbacks = [cb];
+
 	var self = this;
 	var xhr = this.GET(opts.url, opts, function(err, obj) {
 		if (err) {
