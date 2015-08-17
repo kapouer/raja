@@ -208,6 +208,7 @@ Raja.prototype.on = function(url, opts, listener) {
 
 function doOn(url, opts, listener) {
 	this.loadIo();
+	var self = this;
 	var plistener = function() {
 		try {
 			listener.apply(null, Array.prototype.slice.call(arguments));
