@@ -440,8 +440,8 @@ Raja.prototype.parseUrl = parseUrl;
 function resolve(url, rel) {
 	if (!rel) rel = document.location;
 	if (window.URL) {
-		if (typeof rel == "string") rel = new window.URL(rel, document.location);
-		var rurl = new window.URL(url, rel);
+		if (typeof rel == "string") rel = new window.URL(rel, document.location.href);
+		var rurl = new window.URL(url, rel.href);
 		return rurl.pathname + rurl.search;
 	}
 	if (typeof rel == "string") rel = parseUrl(rel);
