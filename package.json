@@ -46,7 +46,7 @@
     "type-is": "^1.6.0"
   },
   "peerDependencies": {
-    "express-dom": "^3.0.0"
+    "express-dom": "^3.0.4"
   },
   "devDependencies": {
     "express": "^4.12.0",
