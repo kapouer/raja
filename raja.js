@@ -194,7 +194,6 @@ Raja.prototype.emit = function(what) {
 };
 
 Raja.prototype.on = function(url, opts, listener) {
-	var self = this;
 	if (!listener && typeof opts == "function") {
 		listener = opts;
 		opts = null;
@@ -452,7 +451,7 @@ function resolve(url, rel) {
 	// do not resolve url if it isn't relative
 	var path = loc.pathname + loc.search;
 	if (path == url || loc.href == url || loc.protocol + url == loc.href) return path;
-	pathname = rel.pathname + '/../' + url;
+	var pathname = rel.pathname + '/../' + url;
 	return parseUrl(pathname).pathname + loc.search;
 }
 Raja.prototype.resolve = resolve;
@@ -474,10 +473,11 @@ Raja.prototype.urlParams = urlParams;
 Raja.prototype.query = {
 	stringify: function(query) {
 		var comps = [];
-		for (var k in query) {
+		var i, k;
+		for (k in query) {
 			var val = query[k];
 			if (val && typeof val == "object") { // deal only with select elements here
-				for (var i=0; i < val.length; i++) {
+				for (i=0; i < val.length; i++) {
 					comps.push({key: k, val: val[i]});
 				}
 			} else {
@@ -490,7 +490,7 @@ Raja.prototype.query = {
 			else return 0;
 		});
 		var str, list = [];
-		for (var i=0; i < comps.length; i++) {
+		for (i=0; i < comps.length; i++) {
 			str = encodeURIComponent(comps[i].key);
 			if (comps[i].val != null) str += '=' + encodeURIComponent(comps[i].val);
 			list.push(str);
@@ -559,11 +559,12 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 
 		var xhr = new XMLHttpRequest();
 		xhr.open(method, opts.url, true);
-		xhr.onreadystatechange = function(e) {
+		xhr.onreadystatechange = function() {
 			if (this.readyState == 4) {
 				var code = this.status;
+				var err;
 				if (!code) {
-					var err = new Error("xhr cancelled " + opts.url);
+					err = new Error("xhr cancelled " + opts.url);
 					err.code = 0;
 					return cb(err);
 				}
@@ -581,7 +582,7 @@ for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
 				if (code >= 200 && code < 400) {
 					cb(null, response);
 				} else {
-					var err = new Error(response || ex || "unreadable response");
+					err = new Error(response || ex || "unreadable response");
 					err.code = code;
 					cb(err);
 				}
