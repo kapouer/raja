@@ -36,7 +36,7 @@
     "debug": "^2.2.0",
     "express-buffer-response": "^1.1.2",
     "knex": "^0.8.6",
-    "objection": "^0.2.1",
+    "objection": "^0.2.4",
     "on-headers": "^1.0.0",
     "path-to-regexp": "^1.2.1",
     "queue-async": "^1.0.7",
