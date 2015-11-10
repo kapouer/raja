@@ -521,7 +521,7 @@ Raja.prototype.query = {
 	}
 };
 
-for (var method in {GET:1, PUT:1, POST:1, DELETE:1}) {
+for (var method in {GET:1, PUT:1, POST:1, DELETE:1, PATCH: 1}) {
 	Raja.prototype[method] = (function(method) { return function(url, opts, body, cb) {
 		var self = this;
 		if (!url) throw new Error("Missing url in raja." + method);
