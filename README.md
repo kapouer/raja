@@ -1,3 +1,23 @@
+DEPRECATED
+==========
+
+raja was an interesting experiment but some choices weren't fit
+for long-term development.
+
+A lighter, more modular and better maintained alternative is this stack:
+
+- bundledom for preparing bundles (or any other build system)
+- express-dom for server page prerendering (or any other prerenderer)
+- REST, graphQL, anything for the backend
+- upcache and json web tokens for authentication / permission handling
+- upcache for proxy cache invalidation
+
+It's still missing client data synchronization, but any good solution
+regarding that matter shouldn't depend on the choice of stack anyway.
+
+
+
+
 raja - synchronized cache proxies for express-dom
 =================================================
 
